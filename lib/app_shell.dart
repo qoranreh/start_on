@@ -1,15 +1,15 @@
 import 'dart:async';
 
-import 'package:ad_focus/dialogs/add_quest_dialog.dart';
-import 'package:ad_focus/models/app_local_data.dart';
-import 'package:ad_focus/pages/dungeon_screen.dart';
-import 'package:ad_focus/pages/home_screen.dart';
-import 'package:ad_focus/pages/profile_screen.dart';
-import 'package:ad_focus/pages/quest_timer_screen.dart';
-import 'package:ad_focus/pages/record_screen.dart';
-import 'package:ad_focus/pages/shop_screen.dart';
-import 'package:ad_focus/storage/local_data_store.dart';
-import 'package:ad_focus/widgets/common.dart';
+import 'package:start_on/dialogs/add_quest_dialog.dart';
+import 'package:start_on/models/app_local_data.dart';
+import 'package:start_on/pages/dungeon_screen.dart';
+import 'package:start_on/pages/home_screen.dart';
+import 'package:start_on/pages/profile_screen.dart';
+import 'package:start_on/pages/quest_timer_screen.dart';
+import 'package:start_on/pages/record_screen.dart';
+import 'package:start_on/pages/shop_screen.dart';
+import 'package:start_on/storage/local_data_store.dart';
+import 'package:start_on/widgets/common.dart';
 import 'package:flutter/material.dart';
 
 class AdFocusApp extends StatelessWidget {

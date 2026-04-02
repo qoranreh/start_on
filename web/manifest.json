@@ -1,6 +1,6 @@
 {
-    "name": "ad_focus",
-    "short_name": "ad_focus",
+    "name": "Start On",
+    "short_name": "Start On",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -1,4 +1,4 @@
-package com.adfocus.ad_focus
+package com.yourteam.starton
 
 import io.flutter.embedding.android.FlutterActivity
 

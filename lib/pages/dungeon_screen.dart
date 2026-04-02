@@ -1,4 +1,4 @@
-import 'package:ad_focus/widgets/common.dart';
+import 'package:start_on/widgets/common.dart';
 import 'package:flutter/material.dart';
 
 class DungeonScreen extends StatelessWidget {

@@ -1,5 +1,5 @@
-import 'package:ad_focus/models/app_local_data.dart';
-import 'package:ad_focus/widgets/common.dart';
+import 'package:start_on/models/app_local_data.dart';
+import 'package:start_on/widgets/common.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatelessWidget {
