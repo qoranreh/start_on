@@ -1,6 +1,6 @@
 import 'package:start_on/models/app_local_data.dart';
 import 'package:flutter/material.dart';
-
+//퀘스트 추가dialog
 class AddQuestDialog extends StatefulWidget {
   const AddQuestDialog({super.key});
 
@@ -10,6 +10,7 @@ class AddQuestDialog extends StatefulWidget {
 
 class _AddQuestDialogState extends State<AddQuestDialog> {
   final TextEditingController _controller = TextEditingController();
+
   String _difficulty = '보통';
   String _category = '지능';
 

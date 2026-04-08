@@ -62,6 +62,54 @@ class RecentActivity {
   }
 }
 
+class CompletedQuestRecord {
+  CompletedQuestRecord({
+    required this.questId,
+    required this.title,
+    required this.difficulty,
+    required this.category,
+    required this.earnedExp,
+    required this.completedAt,
+    required this.elapsedSeconds,
+    this.proofImagePath,
+  });
+
+  final String questId;
+  final String title;
+  final String difficulty;
+  final String category;
+  final int earnedExp;
+  final String completedAt;
+  final int elapsedSeconds;
+  final String? proofImagePath;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'questId': questId,
+      'title': title,
+      'difficulty': difficulty,
+      'category': category,
+      'earnedExp': earnedExp,
+      'completedAt': completedAt,
+      'elapsedSeconds': elapsedSeconds,
+      'proofImagePath': proofImagePath,
+    };
+  }
+
+  factory CompletedQuestRecord.fromJson(Map<String, dynamic> json) {
+    return CompletedQuestRecord(
+      questId: json['questId'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      difficulty: json['difficulty'] as String? ?? '보통',
+      category: json['category'] as String? ?? '지능',
+      earnedExp: json['earnedExp'] as int? ?? 0,
+      completedAt: json['completedAt'] as String? ?? '',
+      elapsedSeconds: json['elapsedSeconds'] as int? ?? 0,
+      proofImagePath: json['proofImagePath'] as String?,
+    );
+  }
+}
+
 class AppLocalData {
   AppLocalData({
     required this.userName,
@@ -85,9 +133,15 @@ class AppLocalData {
     required this.orderStat,
     required this.intelligenceStat,
     required this.healthStat,
+    required this.weeklyActivityCounts,
     required this.weeklyActivityBars,
     required this.recentActivities,
+    required this.completedQuests,
     required this.quests,
+    required this.previousWeeklyCompletionRate,
+    required this.dailyResetKey,
+    required this.weeklyResetKey,
+    required this.monthlyResetKey,
   });
 
   final String userName;
@@ -111,9 +165,15 @@ class AppLocalData {
   final int orderStat;
   final int intelligenceStat;
   final int healthStat;
+  final List<int> weeklyActivityCounts;
   final List<double> weeklyActivityBars;
   final List<RecentActivity> recentActivities;
+  final List<CompletedQuestRecord> completedQuests;
   final List<QuestItem> quests;
+  final int previousWeeklyCompletionRate;
+  final String dailyResetKey;
+  final String weeklyResetKey;
+  final String monthlyResetKey;
 
   factory AppLocalData.initial() {
     return AppLocalData(
@@ -138,9 +198,15 @@ class AppLocalData {
       orderStat: 0,
       intelligenceStat: 0,
       healthStat: 0,
+      weeklyActivityCounts: List<int>.filled(7, 0),
       weeklyActivityBars: List<double>.filled(7, 0),
       recentActivities: const [],
+      completedQuests: const [],
       quests: const [],
+      previousWeeklyCompletionRate: 0,
+      dailyResetKey: '',
+      weeklyResetKey: '',
+      monthlyResetKey: '',
     );
   }
 
@@ -166,9 +232,15 @@ class AppLocalData {
     int? orderStat,
     int? intelligenceStat,
     int? healthStat,
+    List<int>? weeklyActivityCounts,
     List<double>? weeklyActivityBars,
     List<RecentActivity>? recentActivities,
+    List<CompletedQuestRecord>? completedQuests,
     List<QuestItem>? quests,
+    int? previousWeeklyCompletionRate,
+    String? dailyResetKey,
+    String? weeklyResetKey,
+    String? monthlyResetKey,
   }) {
     return AppLocalData(
       userName: userName ?? this.userName,
@@ -192,9 +264,15 @@ class AppLocalData {
       orderStat: orderStat ?? this.orderStat,
       intelligenceStat: intelligenceStat ?? this.intelligenceStat,
       healthStat: healthStat ?? this.healthStat,
+      weeklyActivityCounts: weeklyActivityCounts ?? this.weeklyActivityCounts,
       weeklyActivityBars: weeklyActivityBars ?? this.weeklyActivityBars,
       recentActivities: recentActivities ?? this.recentActivities,
+      completedQuests: completedQuests ?? this.completedQuests,
       quests: quests ?? this.quests,
+      previousWeeklyCompletionRate: previousWeeklyCompletionRate ?? this.previousWeeklyCompletionRate,
+      dailyResetKey: dailyResetKey ?? this.dailyResetKey,
+      weeklyResetKey: weeklyResetKey ?? this.weeklyResetKey,
+      monthlyResetKey: monthlyResetKey ?? this.monthlyResetKey,
     );
   }
 
@@ -221,9 +299,15 @@ class AppLocalData {
       'orderStat': orderStat,
       'intelligenceStat': intelligenceStat,
       'healthStat': healthStat,
+      'weeklyActivityCounts': weeklyActivityCounts,
       'weeklyActivityBars': weeklyActivityBars,
       'recentActivities': recentActivities.map((item) => item.toJson()).toList(),
+      'completedQuests': completedQuests.map((item) => item.toJson()).toList(),
       'quests': quests.map((item) => item.toJson()).toList(),
+      'previousWeeklyCompletionRate': previousWeeklyCompletionRate,
+      'dailyResetKey': dailyResetKey,
+      'weeklyResetKey': weeklyResetKey,
+      'monthlyResetKey': monthlyResetKey,
     };
   }
 
@@ -251,15 +335,26 @@ class AppLocalData {
       orderStat: json['orderStat'] as int? ?? defaults.orderStat,
       intelligenceStat: json['intelligenceStat'] as int? ?? defaults.intelligenceStat,
       healthStat: json['healthStat'] as int? ?? defaults.healthStat,
+      weeklyActivityCounts: ((json['weeklyActivityCounts'] as List<dynamic>?) ?? const [])
+          .map((item) => item as int)
+          .toList(),
       weeklyActivityBars: ((json['weeklyActivityBars'] as List<dynamic>?) ?? defaults.weeklyActivityBars)
           .map((item) => (item as num).toDouble())
           .toList(),
       recentActivities: ((json['recentActivities'] as List<dynamic>?) ?? const [])
           .map((item) => RecentActivity.fromJson(Map<String, dynamic>.from(item as Map)))
           .toList(),
+      completedQuests: ((json['completedQuests'] as List<dynamic>?) ?? const [])
+          .map((item) => CompletedQuestRecord.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList(),
       quests: ((json['quests'] as List<dynamic>?) ?? const [])
           .map((item) => QuestItem.fromJson(Map<String, dynamic>.from(item as Map)))
           .toList(),
+      previousWeeklyCompletionRate:
+          json['previousWeeklyCompletionRate'] as int? ?? defaults.previousWeeklyCompletionRate,
+      dailyResetKey: json['dailyResetKey'] as String? ?? defaults.dailyResetKey,
+      weeklyResetKey: json['weeklyResetKey'] as String? ?? defaults.weeklyResetKey,
+      monthlyResetKey: json['monthlyResetKey'] as String? ?? defaults.monthlyResetKey,
     );
   }
 }

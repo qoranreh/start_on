@@ -138,14 +138,20 @@ class _AdFocusShellState extends State<AdFocusShell> {
   }
 
   Future<void> _openQuestTimer(QuestItem quest) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final result = await Navigator.of(context).push<CompletedQuestRecord>(
+      MaterialPageRoute<CompletedQuestRecord>(
         builder: (_) => QuestTimerScreen(
           quest: quest,
           onDelete: () => _deleteQuest(quest),
         ),
       ),
     );
+
+    if (result == null) {
+      return;
+    }
+
+    _setLocalData(_store.completeQuest(_localData, result));
   }
 
   void _deleteQuest(QuestItem quest) {

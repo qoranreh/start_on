@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:start_on/models/app_local_data.dart';
+import 'package:start_on/storage/quest_image_store.dart';
 import 'package:start_on/widgets/common.dart';
 import 'package:flutter/material.dart';
-
+import 'package:image_picker/image_picker.dart';
+//퀘스트 눌렀을떄 나오는 화면 (타이머화면)
 class QuestTimerScreen extends StatefulWidget {
   const QuestTimerScreen({
     super.key,
@@ -22,6 +25,10 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   Timer? _timer;
   Duration _elapsed = Duration.zero;
   bool _running = false;
+  final ImagePicker _imagePicker = ImagePicker();
+  final QuestImageStore _questImageStore = const QuestImageStore();
+  XFile? _proofImage;
+  bool _isCompleting = false;
 
   @override
   void dispose() {
@@ -144,34 +151,97 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 34),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: const Color(0xFFD5DBE8)),
-                      ),
-                      child: const Column(
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _isCompleting ? null : () => _pickProofImage(ImageSource.camera),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF667085),
+                              side: const BorderSide(color: Color(0xFFD5DBE8)),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            icon: const Icon(Icons.photo_camera_outlined),
+                            label: const Text('카메라'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: _isCompleting ? null : () => _pickProofImage(ImageSource.gallery),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF667085),
+                              side: const BorderSide(color: Color(0xFFD5DBE8)),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            icon: const Icon(Icons.photo_library_outlined),
+                            label: const Text('갤러리'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (_proofImage == null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 34),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFD5DBE8)),
+                        ),
+                        child: const Column(
+                          children: [
+                            Icon(Icons.upload_outlined, size: 34, color: Color(0xFF8E9AAE)),
+                            SizedBox(height: 8),
+                            Text(
+                              '카메라 촬영 또는 갤러리에서 선택',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Color(0xFF7E899D),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Stack(
                         children: [
-                          Icon(Icons.upload_outlined, size: 34, color: Color(0xFF8E9AAE)),
-                          SizedBox(height: 8),
-                          Text(
-                            '사진 업로드',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Color(0xFF7E899D),
-                              fontWeight: FontWeight.w600,
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(18),
+                            child: Image.file(
+                              File(_proofImage!.path),
+                              width: double.infinity,
+                              height: 220,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          Positioned(
+                            top: 10,
+                            right: 10,
+                            child: IconButton.filledTonal(
+                              onPressed: _isCompleting ? null : () => setState(() => _proofImage = null),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.white.withValues(alpha: 0.88),
+                                foregroundColor: const Color(0xFF667085),
+                              ),
+                              icon: const Icon(Icons.close_rounded),
                             ),
                           ),
                         ],
                       ),
-                    ),
                     const SizedBox(height: 28),
                     Row(
                       children: [
                         Expanded(
                           child: FilledButton.tonal(
-                            onPressed: _toggleTimer,
+                            onPressed: _isCompleting ? null : _toggleTimer,
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFFB8DCFF),
                               foregroundColor: Colors.white,
@@ -186,7 +256,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
                         const SizedBox(width: 14),
                         Expanded(
                           child: FilledButton(
-                            onPressed: () => Navigator.of(context).pop(),
+                            onPressed: _isCompleting ? null : _completeQuest,
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFFF6B4B9),
                               foregroundColor: Colors.white,
@@ -195,7 +265,16 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
                                 borderRadius: BorderRadius.circular(18),
                               ),
                             ),
-                            child: const Text('완료'),
+                            child: _isCompleting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.4,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('완료'),
                           ),
                         ),
                       ],
@@ -224,6 +303,55 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
       }
       setState(() => _elapsed += const Duration(seconds: 1));
     });
+  }
+
+  Future<void> _pickProofImage(ImageSource source) async {
+    final image = await _imagePicker.pickImage(
+      source: source,
+      imageQuality: 88,
+      maxWidth: 1800,
+    );
+
+    if (image == null || !mounted) {
+      return;
+    }
+
+    setState(() => _proofImage = image);
+  }
+
+  Future<void> _completeQuest() async {
+    if (_running) {
+      _toggleTimer();
+    }
+
+    setState(() => _isCompleting = true);
+
+    final completedAt = DateTime.now();
+    String? proofImagePath;
+    if (_proofImage != null) {
+      proofImagePath = await _questImageStore.savePickedImage(
+        _proofImage!,
+        questId: widget.quest.id,
+        completedAt: completedAt,
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pop(
+      CompletedQuestRecord(
+        questId: widget.quest.id,
+        title: widget.quest.title,
+        difficulty: widget.quest.difficulty,
+        category: widget.quest.category,
+        earnedExp: widget.quest.exp,
+        completedAt: completedAt.toIso8601String(),
+        elapsedSeconds: _elapsed.inSeconds,
+        proofImagePath: proofImagePath,
+      ),
+    );
   }
 
   String _formatDuration(Duration duration) {
