@@ -184,13 +184,13 @@ class StatCard extends StatelessWidget {
         children: [
           const SectionHeading(icon: Icons.star_border_rounded, title: '능력치'),
           const SizedBox(height: 16),
-          StatBar(label: '성실 스텟', value: data.diligenceStat / 100, score: '${data.diligenceStat} / 100', color: const Color(0xFFFF8B93)),
+          StatBar(label: 'Work 스텟', value: data.diligenceStat / 100, score: '${data.diligenceStat} / 100', color: const Color(0xFFFF8B93)),
           const SizedBox(height: 14),
-          StatBar(label: '정돈 스텟', value: data.orderStat / 100, score: '${data.orderStat} / 100', color: const Color(0xFFFFD97D)),
+          StatBar(label: 'Todo 스텟', value: data.orderStat / 100, score: '${data.orderStat} / 100', color: const Color(0xFFFFD97D)),
           const SizedBox(height: 14),
-          StatBar(label: '지능 스텟', value: data.intelligenceStat / 100, score: '${data.intelligenceStat} / 100', color: const Color(0xFFAED7FF)),
+          StatBar(label: 'A&I 스텟', value: data.intelligenceStat / 100, score: '${data.intelligenceStat} / 100', color: const Color(0xFFAED7FF)),
           const SizedBox(height: 14),
-          StatBar(label: '체력 스텟', value: data.healthStat / 100, score: '${data.healthStat} / 100', color: const Color(0xFF78E49B)),
+          StatBar(label: 'Exercise 스텟', value: data.healthStat / 100, score: '${data.healthStat} / 100', color: const Color(0xFF78E49B)),
         ],
       ),
     );

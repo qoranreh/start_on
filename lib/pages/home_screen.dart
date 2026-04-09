@@ -3,8 +3,9 @@ import 'dart:io';
 import 'package:start_on/models/app_local_data.dart';
 import 'package:start_on/widgets/common.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.data,
@@ -21,9 +22,41 @@ class HomeScreen extends StatelessWidget {
   final ValueChanged<int> onTabChange;
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late final ScrollController _scrollController;
+  double _scrollOffset = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController()..addListener(_handleScroll);
+  }
+
+  void _handleScroll() {
+    final offset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    if ((offset - _scrollOffset).abs() < 0.5) {
+      return;
+    }
+    setState(() {
+      _scrollOffset = offset;
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController
+      ..removeListener(_handleScroll)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final todayCompletedQuests = data.completedQuests.where((item) {
+    final todayCompletedQuests = widget.data.completedQuests.where((item) {
       final completedAt = DateTime.tryParse(item.completedAt)?.toLocal();
       return completedAt != null &&
           completedAt.year == now.year &&
@@ -31,113 +64,74 @@ class HomeScreen extends StatelessWidget {
           completedAt.day == now.day;
     }).toList();
 
-    return Stack(
+    return ListView(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(22, 12, 22, 120),
       children: [
-        ListView(
-          padding: const EdgeInsets.fromLTRB(22, 12, 22, 120),
+        Row(
           children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    '오늘의 퀘스트',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1C2940),
-                    ),
-                  ),
-                ),
-                TopIconButton(icon: Icons.emoji_events_outlined, onTap: () {}),
-                const SizedBox(width: 10),
-                TopIconButton(icon: Icons.settings_outlined, onTap: () {}),
-              ],
-            ),
-            const SizedBox(height: 18),
-            const MotivationCard(),
-            const SizedBox(height: 20),
-            PlayerLevelCard(data: data),
-            const SizedBox(height: 22),
-            RewardRow(data: data),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    '오늘의 퀘스트',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1C2940),
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => onTabChange(1),
-                  child: const Text(
-                    '던전 보기',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF8E9AAE),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            if (data.quests.isEmpty)
-              const EmptyQuestCard()
-            else
-              for (final quest in data.quests) ...[
-                QuestCard(
-                  quest: quest,
-                  onTap: () => onQuestTap(quest),
-                  onDelete: () => onDeleteQuest(quest),
-                ),
-                const SizedBox(height: 14),
-              ],
-            if (todayCompletedQuests.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              const Text(
-                '완료한 퀘스트',
+            const Expanded(
+              child: Text(
+                '오늘의 퀘스트',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
                   color: Color(0xFF1C2940),
                 ),
               ),
-              const SizedBox(height: 12),
-              for (final item in todayCompletedQuests) ...[
-                CompletedQuestCard(record: item),
-                const SizedBox(height: 12),
-              ],
-            ],
+            ),
+            TopIconButton(icon: Icons.emoji_events_outlined, onTap: () {}),
+            const SizedBox(width: 10),
+            TopIconButton(icon: Icons.settings_outlined, onTap: () {}),
           ],
         ),
-        Positioned(
-          right: 22,
-          bottom: 108,
-          child: GestureDetector(
-            onTap: onAddQuest,
-            child: Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFF8B93),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF8B93).withValues(alpha: 0.34),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
+        const SizedBox(height: 18),
+        MotivationCard(scrollOffset: _scrollOffset),
+        const SizedBox(height: 20),
+        const CategoryGrid(),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                '오늘의 퀘스트',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1C2940),
+                ),
               ),
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (widget.data.quests.isEmpty)
+          EmptyQuestCard(onTap: widget.onAddQuest)
+        else
+          for (final quest in widget.data.quests) ...[
+            QuestCard(
+              quest: quest,
+              onTap: () => widget.onQuestTap(quest),
+              onDelete: () => widget.onDeleteQuest(quest),
+            ),
+            const SizedBox(height: 14),
+          ],
+        if (todayCompletedQuests.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text(
+            '완료한 퀘스트',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF1C2940),
             ),
           ),
-        ),
+          const SizedBox(height: 12),
+          for (final item in todayCompletedQuests) ...[
+            CompletedQuestCard(record: item),
+            const SizedBox(height: 12),
+          ],
+        ],
       ],
     );
   }
@@ -336,34 +330,39 @@ class CompletedQuestCard extends StatelessWidget {
 }
 
 class EmptyQuestCard extends StatelessWidget {
-  const EmptyQuestCard({super.key});
+  const EmptyQuestCard({super.key, required this.onTap});
+
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return const RoundedCard(
-      padding: EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Icon(Icons.inbox_outlined, size: 34, color: Color(0xFFC0C7D4)),
-          SizedBox(height: 12),
-          Text(
-            '등록된 퀘스트가 없습니다',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF33415C),
+    return GestureDetector(
+      onTap: onTap,
+      child: const RoundedCard(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          children: [
+            Icon(Icons.inbox_outlined, size: 34, color: Color(0xFFC0C7D4)),
+            SizedBox(height: 12),
+            Text(
+              '등록된 퀘스트가 없습니다',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF33415C),
+              ),
             ),
-          ),
-          SizedBox(height: 6),
-          Text(
-            '오른쪽 아래 + 버튼으로 첫 퀘스트를 추가하세요',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF8E9AAE),
+            SizedBox(height: 6),
+            Text(
+              '이 카드를 눌러 첫 퀘스트를 추가하세요',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Color(0xFF8E9AAE),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -392,229 +391,269 @@ class TopIconButton extends StatelessWidget {
   }
 }
 
-class MotivationCard extends StatelessWidget {
-  const MotivationCard({super.key});
+class MotivationCard extends StatefulWidget {
+  const MotivationCard({super.key, required this.scrollOffset});
+
+  final double scrollOffset;
+
+  @override
+  State<MotivationCard> createState() => _MotivationCardState();
+}
+
+class _MotivationCardState extends State<MotivationCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
+  late final Animation<double> _scale;
+  double? _cardHeight;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    );
+    _fade = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.42, curve: Curves.easeOut),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.45, curve: Curves.easeOutCubic),
+      ),
+    );
+    _scale = Tween<double>(begin: 0.98, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.45, curve: Curves.easeOutCubic),
+      ),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const RoundedCard(
-      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      child: Row(
-        children: [
-          Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFE1A7)),
-          SizedBox(width: 10),
-          Text(
-            '오늘도 파이팅!',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF64748B),
+    final rawProgress = _cardHeight == null || _cardHeight == 0
+        ? 0.0
+        : (widget.scrollOffset / _cardHeight!).clamp(0.0, 1.0).toDouble();
+    final collapseProgress = Curves.easeOutCubic.transform(rawProgress);
+    final visibleFactor = 1 - collapseProgress;
+
+    return ClipRect(
+      child: Align(
+        alignment: Alignment.topCenter,
+        heightFactor: visibleFactor,
+        child: Opacity(
+          opacity: visibleFactor,
+          child: SlideTransition(
+            position: _slide,
+            child: FadeTransition(
+              opacity: _fade,
+              child: ScaleTransition(
+                scale: _scale,
+                child: MeasureSize(
+                  onChange: (size) {
+                    if (_cardHeight == null || (size.height - _cardHeight!).abs() > 0.5) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) {
+                          return;
+                        }
+                        setState(() {
+                          _cardHeight = size.height;
+                        });
+                      });
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.86),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFB8C7DE).withValues(alpha: 0.2),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.auto_awesome_rounded, color: Color(0xFFFFE1A7)),
+                        SizedBox(width: 10),
+                        Text(
+                          '오늘도 파이팅!',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class PlayerLevelCard extends StatelessWidget {
-  const PlayerLevelCard({required this.data, super.key});
+class MeasureSize extends SingleChildRenderObjectWidget {
+  const MeasureSize({required this.onChange, required super.child, super.key});
 
-  final AppLocalData data;
+  final ValueChanged<Size> onChange;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _RenderMeasureSize(onChange);
+  }
+
+  @override
+  void updateRenderObject(BuildContext context, RenderObject renderObject) {
+    (renderObject as _RenderMeasureSize).onChange = onChange;
+  }
+}
+
+class _RenderMeasureSize extends RenderProxyBox {
+  _RenderMeasureSize(this.onChange);
+
+  ValueChanged<Size> onChange;
+  Size? _oldSize;
+
+  @override
+  void performLayout() {
+    super.performLayout();
+    final newSize = child?.size;
+    if (newSize == null || newSize == _oldSize) {
+      return;
+    }
+    _oldSize = newSize;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      onChange(newSize);
+    });
+  }
+}
+
+class CategoryGrid extends StatelessWidget {
+  const CategoryGrid({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFFF7F88),
-            Color(0xFFFF7C7F),
+    return const Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: CategoryCard(
+                title: 'work',
+                icon: Icons.work_outline_rounded,
+                accentColor: Color(0xFF5C7CFA),
+                backgroundColor: Color(0xFFF2F5FF),
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: CategoryCard(
+                title: 'exercise',
+                icon: Icons.fitness_center_rounded,
+                accentColor: Color(0xFFFF8A65),
+                backgroundColor: Color(0xFFFFF1EB),
+              ),
+            ),
           ],
         ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF8B93).withValues(alpha: 0.3),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '플레이어',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+        SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: CategoryCard(
+                title: 'A&I',
+                icon: Icons.psychology_alt_outlined,
+                accentColor: Color(0xFF26A69A),
+                backgroundColor: Color(0xFFECFAF8),
               ),
-              Text(
-                '레벨',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Text(
-                  data.userName,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              Text(
-                '${data.level}',
-                style: const TextStyle(
-                  fontSize: 38,
-                  height: 1,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  '경험치',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              Text(
-                '${data.currentExp} / ${data.maxExp} EXP',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              minHeight: 10,
-              value: data.maxExp == 0 ? 0 : data.currentExp / data.maxExp,
-              backgroundColor: const Color(0xFFFFA0A6),
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class RewardRow extends StatelessWidget {
-  const RewardRow({required this.data, super.key});
-
-  final AppLocalData data;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: RewardCard(
-            title: '일일 보상',
-            value: '${data.dailyRewardCount} / ${data.dailyRewardTarget}',
-            progress: data.dailyRewardTarget == 0 ? 0 : data.dailyRewardCount / data.dailyRewardTarget,
-            progressColor: const Color(0xFFD9DEE9),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: RewardCard(
-            title: '주간 보상',
-            value: '${data.weeklyRewardCount} / ${data.weeklyRewardTarget}',
-            progress: data.weeklyRewardTarget == 0 ? 0 : data.weeklyRewardCount / data.weeklyRewardTarget,
-            progressColor: const Color(0xFFFFDF7F),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: RewardCard(
-            title: '월간 보상',
-            value: '${data.monthlyRewardCount} / ${data.monthlyRewardTarget}',
-            progress: data.monthlyRewardTarget == 0 ? 0 : data.monthlyRewardCount / data.monthlyRewardTarget,
-            progressColor: const Color(0xFFAED7FF),
-          ),
+            SizedBox(width: 12),
+            Expanded(
+              child: CategoryCard(
+                title: 'todo',
+                icon: Icons.checklist_rounded,
+                accentColor: Color(0xFFFFC857),
+                backgroundColor: Color(0xFFFFF8E7),
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-class RewardCard extends StatelessWidget {
-  const RewardCard({
+class CategoryCard extends StatelessWidget {
+  const CategoryCard({
     super.key,
     required this.title,
-    required this.value,
-    required this.progress,
-    required this.progressColor,
+    required this.icon,
+    required this.accentColor,
+    required this.backgroundColor,
   });
 
   final String title;
-  final String value;
-  final double progress;
-  final Color progressColor;
+  final IconData icon;
+  final Color accentColor;
+  final Color backgroundColor;
 
   @override
   Widget build(BuildContext context) {
-    return RoundedCard(
-      padding: const EdgeInsets.all(14),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: accentColor.withValues(alpha: 0.18)),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.12),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: accentColor, size: 22),
+          ),
+          const SizedBox(height: 26),
           Text(
             title,
             style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF98A2B3),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF33415C),
-            ),
-          ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              minHeight: 8,
-              value: progress,
-              backgroundColor: const Color(0xFFE9EDF5),
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+              color: Color(0xFF24324A),
             ),
           ),
         ],

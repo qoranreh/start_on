@@ -1,3 +1,23 @@
+const List<String> questCategories = ['work', 'exercise', 'A&I', 'todo'];
+
+String normalizeQuestCategory(String? category) {
+  switch (category) {
+    case 'work':
+    case 'exercise':
+    case 'A&I':
+    case 'todo':
+      return category!;
+    case '정돈':
+      return 'todo';
+    case '지능':
+      return 'A&I';
+    case '체력':
+      return 'exercise';
+    default:
+      return 'work';
+  }
+}
+
 class QuestItem {
   QuestItem({
     required this.id,
@@ -29,7 +49,7 @@ class QuestItem {
       title: json['title'] as String? ?? '',
       exp: json['exp'] as int? ?? 0,
       difficulty: json['difficulty'] as String? ?? '보통',
-      category: json['category'] as String? ?? '지능',
+      category: normalizeQuestCategory(json['category'] as String?),
     );
   }
 }
@@ -101,7 +121,7 @@ class CompletedQuestRecord {
       questId: json['questId'] as String? ?? '',
       title: json['title'] as String? ?? '',
       difficulty: json['difficulty'] as String? ?? '보통',
-      category: json['category'] as String? ?? '지능',
+      category: normalizeQuestCategory(json['category'] as String?),
       earnedExp: json['earnedExp'] as int? ?? 0,
       completedAt: json['completedAt'] as String? ?? '',
       elapsedSeconds: json['elapsedSeconds'] as int? ?? 0,

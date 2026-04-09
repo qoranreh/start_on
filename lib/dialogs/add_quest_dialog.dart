@@ -12,7 +12,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
   final TextEditingController _controller = TextEditingController();
 
   String _difficulty = '보통';
-  String _category = '지능';
+  String _category = 'work';
 
   @override
   void dispose() {
@@ -109,7 +109,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
               ),
               const SizedBox(height: 12),
               ChoiceRow(
-                values: const ['정돈', '지능', '체력'],
+                values: questCategories,
                 selected: _category,
                 selectedColor: const Color(0xFFAED7FF),
                 onSelected: (value) => setState(() => _category = value),
@@ -217,12 +217,19 @@ class ChoiceRow extends StatelessWidget {
                       : null,
                 ),
                 child: Center(
-                  child: Text(
-                    values[i],
-                    style: TextStyle(
-                      color: values[i] == selected ? Colors.white : const Color(0xFF667085),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        values[i],
+                        maxLines: 1,
+                        style: TextStyle(
+                          color: values[i] == selected ? Colors.white : const Color(0xFF667085),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     ),
                   ),
                 ),

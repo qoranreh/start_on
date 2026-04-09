@@ -94,6 +94,7 @@ class _AdFocusShellState extends State<AdFocusShell> {
     ];
 
     return Scaffold(
+      extendBody: true,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -107,6 +108,27 @@ class _AdFocusShellState extends State<AdFocusShell> {
           ),
         ),
         child: SafeArea(child: screens[_currentIndex]),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFF8B93).withValues(alpha: 0.28),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: _openAddQuest,
+          backgroundColor: const Color(0xFFFF8B93),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add_rounded, size: 28),
+        ),
       ),
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _currentIndex,

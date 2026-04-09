@@ -221,14 +221,20 @@ class LocalDataStore {
       '보통' => 8,
       _ => 12,
     };
+    final normalizedCategory = normalizeQuestCategory(category);
 
     return _CategoryStats(
-      diligenceStat: math.min(100, diligenceStat + diligenceGain),
-      orderStat: category == '정돈' ? math.min(100, orderStat + categoryGain) : orderStat,
-      intelligenceStat: category == '지능'
+      diligenceStat: math.min(
+        100,
+        diligenceStat + diligenceGain + (normalizedCategory == 'work' ? categoryGain : 0),
+      ),
+      orderStat: normalizedCategory == 'todo' ? math.min(100, orderStat + categoryGain) : orderStat,
+      intelligenceStat: normalizedCategory == 'A&I'
           ? math.min(100, intelligenceStat + categoryGain)
           : intelligenceStat,
-      healthStat: category == '체력' ? math.min(100, healthStat + categoryGain) : healthStat,
+      healthStat: normalizedCategory == 'exercise'
+          ? math.min(100, healthStat + categoryGain)
+          : healthStat,
     );
   }
 
