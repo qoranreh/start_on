@@ -21,7 +21,9 @@ class AppBottomNavBar extends StatelessWidget {
 
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+      left: false,
+      right: false,
+      minimum: EdgeInsets.zero,
       child: BottomAppBar(
         color: Colors.white.withValues(alpha: 0.94),
         elevation: 14,
