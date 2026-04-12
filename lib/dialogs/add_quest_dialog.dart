@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 
 //퀘스트 추가dialog
 class AddQuestDialog extends StatefulWidget {
-  const AddQuestDialog({super.key});
+  const AddQuestDialog({super.key, this.initialCategory});
+
+  final String? initialCategory;
 
   @override
   State<AddQuestDialog> createState() => _AddQuestDialogState();
@@ -14,6 +16,15 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
 
   String _difficulty = '보통';
   String _category = 'work';
+
+  @override
+  void initState() {
+    super.initState();
+    final initialCategory = widget.initialCategory;
+    if (initialCategory != null && questCategories.contains(initialCategory)) {
+      _category = initialCategory;
+    }
+  }
 
   @override
   void dispose() {
@@ -29,6 +40,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
     );
 
     return Dialog(
+      backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       child: ConstrainedBox(

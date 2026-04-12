@@ -6,9 +6,11 @@ import 'package:start_on/pages/dungeon_screen.dart';
 import 'package:start_on/pages/home_screen.dart';
 import 'package:start_on/pages/quest_timer_screen.dart';
 import 'package:start_on/pages/record_screen.dart';
+import 'package:start_on/pages/settings_screen.dart';
 import 'package:start_on/pages/shop_screen.dart';
 import 'package:start_on/storage/local_data_store.dart';
 import 'package:start_on/widgets/common.dart';
+import 'package:start_on/widgets/quest_completion_celebration.dart';
 import 'package:flutter/material.dart';
 
 class AdFocusApp extends StatelessWidget {
@@ -44,7 +46,9 @@ class _AdFocusShellState extends State<AdFocusShell> {
   final LocalDataStore _store = const LocalDataStore();
 
   int _currentIndex = 0;
+  int _celebrationSeed = 0;
   bool _isLoading = true;
+  bool _showQuestCelebration = false;
   AppLocalData _localData = AppLocalData.initial();
 
   @override
@@ -76,8 +80,10 @@ class _AdFocusShellState extends State<AdFocusShell> {
       HomeScreen(
         data: _localData,
         onAddQuest: _openAddQuest,
+        onAddQuestForCategory: _openAddQuestForCategory,
         onQuestTap: _openQuestTimer,
         onDeleteQuest: _deleteQuest,
+        onOpenSettings: _openSettings,
         onTabChange: _changeTab,
       ),
       DungeonScreen(data: _localData, onClearDungeon: _completeDungeon),
@@ -87,15 +93,35 @@ class _AdFocusShellState extends State<AdFocusShell> {
 
     return Scaffold(
       extendBody: true,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFF8EF), Color(0xFFF7FBFF), Color(0xFFFFF0F3)],
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFFFFF8EF),
+                  Color(0xFFF7FBFF),
+                  Color(0xFFFFF0F3),
+                ],
+              ),
+            ),
+            child: SafeArea(child: screens[_currentIndex]),
           ),
-        ),
-        child: SafeArea(child: screens[_currentIndex]),
+          if (_showQuestCelebration)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 46,
+              height: 220,
+              child: QuestCompletionCelebration(
+                key: ValueKey(_celebrationSeed),
+                seed: _celebrationSeed,
+                onComplete: _hideQuestCelebration,
+              ),
+            ),
+        ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: Container(
@@ -130,10 +156,18 @@ class _AdFocusShellState extends State<AdFocusShell> {
   }
 
   Future<void> _openAddQuest() async {
+    await _showAddQuestDialog();
+  }
+
+  Future<void> _openAddQuestForCategory(String category) async {
+    await _showAddQuestDialog(initialCategory: category);
+  }
+
+  Future<void> _showAddQuestDialog({String? initialCategory}) async {
     final quest = await showDialog<QuestItem>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.28),
-      builder: (context) => const AddQuestDialog(),
+      builder: (context) => AddQuestDialog(initialCategory: initialCategory),
     );
 
     if (quest == null) {
@@ -157,12 +191,19 @@ class _AdFocusShellState extends State<AdFocusShell> {
 
     if (result case CompletedQuestRecord completedRecord) {
       _setLocalData(_store.completeQuest(_localData, completedRecord));
+      _triggerQuestCelebration();
       return;
     }
 
     if (result case QuestItem updatedQuest) {
       _updateQuest(updatedQuest);
     }
+  }
+
+  Future<void> _openSettings() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
   }
 
   void _deleteQuest(QuestItem quest) {
@@ -218,5 +259,19 @@ class _AdFocusShellState extends State<AdFocusShell> {
   void _setLocalData(AppLocalData data) {
     setState(() => _localData = data);
     unawaited(_store.save(data));
+  }
+
+  void _triggerQuestCelebration() {
+    setState(() {
+      _celebrationSeed += 1;
+      _showQuestCelebration = true;
+    });
+  }
+
+  void _hideQuestCelebration() {
+    if (!mounted) {
+      return;
+    }
+    setState(() => _showQuestCelebration = false);
   }
 }
