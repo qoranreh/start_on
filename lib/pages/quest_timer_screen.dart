@@ -5,16 +5,19 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:start_on/models/app_local_data.dart';
 import 'package:start_on/pages/quest_timer/quest_timer_sections.dart';
+import 'package:start_on/services/quest_timer_background_service.dart';
 import 'package:start_on/storage/quest_image_store.dart';
 
 class QuestTimerScreen extends StatefulWidget {
   const QuestTimerScreen({
     super.key,
     required this.quest,
+    required this.notificationsEnabled,
     required this.onDelete,
   });
 
   final QuestItem quest;
+  final bool notificationsEnabled;
   final VoidCallback onDelete;
 
   @override
@@ -30,7 +33,11 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   final QuestImageStore _questImageStore = const QuestImageStore();
 
   // 화면에서 직접 관리하는 진행 상태.
-  Timer? _ticker;
+  final QuestTimerBackgroundService _questTimerService =
+      QuestTimerBackgroundService.instance;
+
+  Timer? _localTicker;
+  StreamSubscription<QuestTimerSnapshot>? _questTimerTickSubscription;
   XFile? _proofImage;
   int _elapsedSeconds = 0;
   bool _hasStarted = false;
@@ -41,11 +48,15 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   void initState() {
     super.initState();
     _elapsedSeconds = widget.quest.elapsedSeconds;
+    if (widget.notificationsEnabled) {
+      _listenToBackgroundTimer();
+    }
   }
 
   @override
   void dispose() {
-    _ticker?.cancel();
+    _localTicker?.cancel();
+    _questTimerTickSubscription?.cancel();
     super.dispose();
   }
 
@@ -69,7 +80,14 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
             children: [
               QuestTimerHeader(
                 onBack: _popWithProgress,
-                onDelete: () {
+                onDelete: () async {
+                  _stopLocalTicker();
+                  if (widget.notificationsEnabled) {
+                    await _questTimerService.stopTimer();
+                  }
+                  if (!context.mounted) {
+                    return;
+                  }
                   widget.onDelete();
                   Navigator.of(context).pop();
                 },
@@ -120,18 +138,46 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   }
 
   void _toggleTimer() {
+    unawaited(_toggleTimerAsync());
+  }
+
+  Future<void> _toggleTimerAsync() async {
     // 진행 중이면 일시정지, 끝까지 찼으면 초기화 후 재시작, 그 외에는 시작/재개.
     if (_running) {
       if (_elapsedSeconds < widget.quest.defaultDurationSeconds) {
         _countDownController.pause();
       }
-      _stopLocalTicker();
+      if (widget.notificationsEnabled) {
+        await _questTimerService.pauseTimer(
+          questId: widget.quest.id,
+          questTitle: widget.quest.title,
+          elapsedSeconds: _elapsedSeconds,
+          defaultDurationSeconds: widget.quest.defaultDurationSeconds,
+        );
+      } else {
+        _stopLocalTicker();
+      }
+      if (!mounted) {
+        return;
+      }
       setState(() => _running = false);
       return;
     }
 
     if (_elapsedSeconds >= widget.quest.defaultDurationSeconds) {
-      _startLocalTicker();
+      if (widget.notificationsEnabled) {
+        await _questTimerService.startOrResumeTimer(
+          questId: widget.quest.id,
+          questTitle: widget.quest.title,
+          elapsedSeconds: _elapsedSeconds,
+          defaultDurationSeconds: widget.quest.defaultDurationSeconds,
+        );
+      } else {
+        _startLocalTicker();
+      }
+      if (!mounted) {
+        return;
+      }
       setState(() => _running = true);
       return;
     }
@@ -143,7 +189,19 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
       _hasStarted = true;
     }
 
-    _startLocalTicker();
+    if (widget.notificationsEnabled) {
+      await _questTimerService.startOrResumeTimer(
+        questId: widget.quest.id,
+        questTitle: widget.quest.title,
+        elapsedSeconds: _elapsedSeconds,
+        defaultDurationSeconds: widget.quest.defaultDurationSeconds,
+      );
+    } else {
+      _startLocalTicker();
+    }
+    if (!mounted) {
+      return;
+    }
     setState(() => _running = true);
   }
 
@@ -164,7 +222,16 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   Future<void> _completeQuest() async {
     // 완료 시 현재 경과 시간과 인증 사진 경로를 기록 화면으로 전달한다.
     if (_running) {
-      _toggleTimer();
+      _stopLocalTicker();
+      if (widget.notificationsEnabled) {
+        await _questTimerService.stopTimer();
+      }
+      if (!mounted) {
+        return;
+      }
+      setState(() => _running = false);
+    } else if (widget.notificationsEnabled) {
+      await _questTimerService.stopTimer();
     }
 
     setState(() => _isCompleting = true);
@@ -207,12 +274,32 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   }
 
   void _popWithProgress() {
+    unawaited(_popWithProgressAsync());
+  }
+
+  Future<void> _popWithProgressAsync() async {
     if (_running) {
       if (_elapsedSeconds < widget.quest.defaultDurationSeconds) {
         _countDownController.pause();
       }
-      _stopLocalTicker();
-      _running = false;
+      if (widget.notificationsEnabled) {
+        await _questTimerService.pauseTimer(
+          questId: widget.quest.id,
+          questTitle: widget.quest.title,
+          elapsedSeconds: _elapsedSeconds,
+          defaultDurationSeconds: widget.quest.defaultDurationSeconds,
+        );
+      } else {
+        _stopLocalTicker();
+      }
+      if (!mounted) {
+        return;
+      }
+      setState(() => _running = false);
+    }
+
+    if (!mounted) {
+      return;
     }
 
     Navigator.of(
@@ -221,11 +308,12 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   }
 
   void _startLocalTicker() {
-    _ticker?.cancel();
-    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+    _localTicker?.cancel();
+    _localTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) {
         return;
       }
+
       setState(() {
         _elapsedSeconds += 1;
       });
@@ -233,8 +321,8 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   }
 
   void _stopLocalTicker() {
-    _ticker?.cancel();
-    _ticker = null;
+    _localTicker?.cancel();
+    _localTicker = null;
   }
 
   String _formatDuration(Duration duration) {
@@ -242,5 +330,47 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
     final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
     final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
     return '$hours:$minutes:$seconds';
+  }
+
+  void _listenToBackgroundTimer() {
+    _questTimerTickSubscription = _questTimerService.timerTicks.listen((tick) {
+      if (!mounted || tick.questId != widget.quest.id) {
+        return;
+      }
+
+      setState(() {
+        _elapsedSeconds = tick.elapsedSeconds;
+        _running = tick.isRunning;
+        _hasStarted = tick.elapsedSeconds > 0 || tick.isRunning;
+      });
+    });
+
+    unawaited(_syncBackgroundTimerState());
+  }
+
+  Future<void> _syncBackgroundTimerState() async {
+    final snapshot = await _questTimerService.currentState();
+    if (!mounted || snapshot == null || snapshot.questId != widget.quest.id) {
+      return;
+    }
+
+    final shouldStartCountdown =
+        snapshot.isRunning &&
+        snapshot.elapsedSeconds < widget.quest.defaultDurationSeconds;
+
+    setState(() {
+      _elapsedSeconds = snapshot.elapsedSeconds;
+      _running = snapshot.isRunning;
+      _hasStarted = snapshot.elapsedSeconds > 0 || snapshot.isRunning;
+    });
+
+    if (shouldStartCountdown) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        _countDownController.start();
+      });
+    }
   }
 }

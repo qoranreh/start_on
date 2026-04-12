@@ -15,6 +15,7 @@ class HomeScreen extends StatefulWidget {
     required this.onQuestTap,
     required this.onDeleteQuest,
     required this.onOpenSettings,
+    required this.onOpenAutoQuestFromGallery,
     required this.onTabChange,
   });
 
@@ -24,6 +25,7 @@ class HomeScreen extends StatefulWidget {
   final ValueChanged<QuestItem> onQuestTap;
   final ValueChanged<QuestItem> onDeleteQuest;
   final VoidCallback onOpenSettings;
+  final VoidCallback onOpenAutoQuestFromGallery;
   final ValueChanged<int> onTabChange;
 
   @override
@@ -82,7 +84,9 @@ class _HomeScreenState extends State<HomeScreen> {
           onAddCategoryQuest: widget.onAddQuestForCategory,
         ),
         const SizedBox(height: 18),
-        const HomeQuestSectionHeader(),
+        HomeQuestSectionHeader(
+          onOpenAutoAdd: widget.onOpenAutoQuestFromGallery,
+        ),
         const SizedBox(height: 14),
         HomeQuestList(
           quests: widget.data.quests,
