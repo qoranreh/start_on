@@ -55,11 +55,17 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
     final defaultDurationSeconds = defaultQuestDurationSecondsForDifficulty(
       _difficulty,
     );
+    final categoryStyle = questCategoryStyleFor(_category);
 
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: categoryStyle.backgroundColor,
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28),
+        side: BorderSide(
+          color: categoryStyle.accentColor.withValues(alpha: 0.24),
+        ),
+      ),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.82,
@@ -78,7 +84,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF1C2940),
+                        color: categoryStyle.accentColor,
                       ),
                     ),
                   ),
@@ -106,22 +112,22 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                 decoration: InputDecoration(
                   hintText: '예: 아침 운동하기',
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: Colors.white.withValues(alpha: 0.92),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 18,
                     vertical: 18,
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFFF9EA5),
+                    borderSide: BorderSide(
+                      color: categoryStyle.accentColor.withValues(alpha: 0.34),
                       width: 2,
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFFF7F88),
+                    borderSide: BorderSide(
+                      color: categoryStyle.accentColor,
                       width: 2,
                     ),
                   ),
@@ -140,7 +146,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
               ChoiceRow(
                 values: const ['쉬움', '보통', '어려움'],
                 selected: _difficulty,
-                selectedColor: const Color(0xFFFF8B93),
+                selectedColor: categoryStyle.accentColor,
                 onSelected: (value) => setState(() => _difficulty = value),
               ),
               const SizedBox(height: 10),
@@ -165,7 +171,8 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
               ChoiceRow(
                 values: questCategories,
                 selected: _category,
-                selectedColor: const Color(0xFFAED7FF),
+                selectedColor: categoryStyle.accentColor,
+                labelBuilder: questCategoryLabel,
                 onSelected: (value) => setState(() => _category = value),
               ),
               const SizedBox(height: 28),
@@ -190,7 +197,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                     child: FilledButton(
                       onPressed: _submit,
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFF6B4B9),
+                        backgroundColor: categoryStyle.accentColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 18),
                         shape: RoundedRectangleBorder(
