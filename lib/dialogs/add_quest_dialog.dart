@@ -3,9 +3,18 @@ import 'package:flutter/material.dart';
 
 //퀘스트 추가dialog
 class AddQuestDialog extends StatefulWidget {
-  const AddQuestDialog({super.key, this.initialCategory});
+  const AddQuestDialog({
+    super.key,
+    this.initialCategory,
+    this.initialQuest,
+    this.title = '새 퀘스트 추가',
+    this.submitLabel = '추가',
+  });
 
   final String? initialCategory;
+  final QuestItem? initialQuest;
+  final String title;
+  final String submitLabel;
 
   @override
   State<AddQuestDialog> createState() => _AddQuestDialogState();
@@ -20,6 +29,14 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
   @override
   void initState() {
     super.initState();
+    final initialQuest = widget.initialQuest;
+    if (initialQuest != null) {
+      _controller.text = initialQuest.title;
+      _difficulty = initialQuest.difficulty;
+      _category = normalizeQuestCategory(initialQuest.category);
+      return;
+    }
+
     final initialCategory = widget.initialCategory;
     if (initialCategory != null && questCategories.contains(initialCategory)) {
       _category = initialCategory;
@@ -55,9 +72,9 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
             children: [
               Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      '새 퀘스트 추가',
+                      widget.title,
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
@@ -180,7 +197,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                           borderRadius: BorderRadius.circular(18),
                         ),
                       ),
-                      child: const Text('추가'),
+                      child: Text(widget.submitLabel),
                     ),
                   ),
                 ],
@@ -198,30 +215,45 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
       return;
     }
 
-    final exp = switch (_difficulty) {
-      '쉬움' => 30,
-      '보통' => 50,
-      _ => 100,
-    };
+    final initialQuest = widget.initialQuest;
+    final exp = expForDifficulty(_difficulty);
 
     Navigator.of(context).pop(
-      QuestItem(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        title: name,
-        exp: exp,
-        difficulty: _difficulty,
-        category: _category,
-        elapsedSeconds: 0,
-        defaultDurationSeconds: defaultQuestDurationSecondsForDifficulty(
-          _difficulty,
-        ),
-      ),
+      (initialQuest ??
+              QuestItem(
+                id: DateTime.now().microsecondsSinceEpoch.toString(),
+                title: '',
+                exp: exp,
+                difficulty: _difficulty,
+                category: _category,
+                elapsedSeconds: 0,
+                defaultDurationSeconds:
+                    defaultQuestDurationSecondsForDifficulty(_difficulty),
+              ))
+          .copyWith(
+            title: name,
+            exp: exp,
+            difficulty: _difficulty,
+            category: _category,
+            elapsedSeconds: initialQuest?.elapsedSeconds ?? 0,
+            defaultDurationSeconds: defaultQuestDurationSecondsForDifficulty(
+              _difficulty,
+            ),
+          ),
     );
   }
 
   String _formatMinutesLabel(int seconds) {
     return '${seconds ~/ 60}분';
   }
+}
+
+int expForDifficulty(String difficulty) {
+  return switch (difficulty) {
+    '쉬움' => 30,
+    '보통' => 50,
+    _ => 100,
+  };
 }
 
 class ChoiceRow extends StatelessWidget {

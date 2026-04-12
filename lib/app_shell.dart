@@ -68,21 +68,24 @@ class _AdFocusShellState extends State<AdFocusShell>
   );
   late final Animation<double> _fabPopScale = TweenSequence<double>([
     TweenSequenceItem(
-      tween: Tween<double>(begin: 1, end: 1.16).chain(
-        CurveTween(curve: Curves.easeOutCubic),
-      ),
+      tween: Tween<double>(
+        begin: 1,
+        end: 1.16,
+      ).chain(CurveTween(curve: Curves.easeOutCubic)),
       weight: 42,
     ),
     TweenSequenceItem(
-      tween: Tween<double>(begin: 1.16, end: 0.94).chain(
-        CurveTween(curve: Curves.easeInOut),
-      ),
+      tween: Tween<double>(
+        begin: 1.16,
+        end: 0.94,
+      ).chain(CurveTween(curve: Curves.easeInOut)),
       weight: 28,
     ),
     TweenSequenceItem(
-      tween: Tween<double>(begin: 0.94, end: 1).chain(
-        CurveTween(curve: Curves.easeOutBack),
-      ),
+      tween: Tween<double>(
+        begin: 0.94,
+        end: 1,
+      ).chain(CurveTween(curve: Curves.easeOutBack)),
       weight: 30,
     ),
   ]).animate(_fabPopController);
@@ -255,6 +258,14 @@ class _AdFocusShellState extends State<AdFocusShell>
       return;
     }
 
+    if (result case QuestTimerScreenResult timerResult) {
+      _updateQuest(timerResult.quest);
+      if (timerResult.didPauseTimer) {
+        _showStyledSnackBar('타이머 일시중지됨', centerText: true, compact: true);
+      }
+      return;
+    }
+
     if (result case QuestItem updatedQuest) {
       _updateQuest(updatedQuest);
     }
@@ -268,11 +279,20 @@ class _AdFocusShellState extends State<AdFocusShell>
   }
 
   Future<void> _openAutoQuestFromGallery() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final generatedQuests = await Navigator.of(context).push<List<QuestItem>>(
+      MaterialPageRoute<List<QuestItem>>(
         builder: (_) => const AutoQuestFromGalleryScreen(),
       ),
     );
+
+    if (!mounted || generatedQuests == null || generatedQuests.isEmpty) {
+      return;
+    }
+
+    _setLocalData(
+      _localData.copyWith(quests: [...generatedQuests, ..._localData.quests]),
+    );
+    _showStyledSnackBar('${generatedQuests.length}개의 퀘스트를 추가했어요.');
   }
 
   void _deleteQuest(QuestItem quest) {
@@ -344,6 +364,68 @@ class _AdFocusShellState extends State<AdFocusShell>
   void _setLocalData(AppLocalData data) {
     setState(() => _localData = data);
     unawaited(_store.save(data));
+  }
+
+  void _showStyledSnackBar(
+    String message, {
+    bool centerText = false,
+    bool compact = false,
+  }) {
+    final theme = Theme.of(context);
+    final mediaQuery = MediaQuery.of(context);
+    final textStyle =
+        theme.snackBarTheme.contentTextStyle ??
+        theme.textTheme.bodyMedium?.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+        ) ??
+        const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        );
+
+    final compactWidth = compact
+        ? (() {
+            final textPainter = TextPainter(
+              text: TextSpan(text: message, style: textStyle),
+              maxLines: 1,
+              textDirection: Directionality.of(context),
+            )..layout(maxWidth: mediaQuery.size.width - 72);
+            return (textPainter.width + 32).clamp(
+              120.0,
+              mediaQuery.size.width - 40,
+            );
+          })()
+        : null;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            message,
+            textAlign: centerText ? TextAlign.center : null,
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFFFF8B93),
+          margin: compact ? null : const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          width: compact ? compactWidth : null,
+          padding: compact
+              ? const EdgeInsets.symmetric(horizontal: 16, vertical: 14)
+              : null,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+        snackBarAnimationStyle: const AnimationStyle(
+          curve: Curves.easeOutCubic,
+          duration: Duration(milliseconds: 420),
+          reverseCurve: Curves.easeInCubic,
+          reverseDuration: Duration(milliseconds: 320),
+        ),
+      );
   }
 
   void _listenToQuestTimerTicks() {

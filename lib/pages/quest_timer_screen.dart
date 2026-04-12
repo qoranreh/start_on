@@ -24,6 +24,16 @@ class QuestTimerScreen extends StatefulWidget {
   State<QuestTimerScreen> createState() => _QuestTimerScreenState();
 }
 
+class QuestTimerScreenResult {
+  const QuestTimerScreenResult({
+    required this.quest,
+    required this.didPauseTimer,
+  });
+
+  final QuestItem quest;
+  final bool didPauseTimer;
+}
+
 class _QuestTimerScreenState extends State<QuestTimerScreen> {
   static const int _minimumRewardSeconds = 10 * 60;
 
@@ -278,6 +288,8 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   }
 
   Future<void> _popWithProgressAsync() async {
+    var didPauseTimer = false;
+
     if (_running) {
       if (_elapsedSeconds < widget.quest.defaultDurationSeconds) {
         _countDownController.pause();
@@ -296,15 +308,19 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
         return;
       }
       setState(() => _running = false);
+      didPauseTimer = true;
     }
 
     if (!mounted) {
       return;
     }
 
-    Navigator.of(
-      context,
-    ).pop(widget.quest.copyWith(elapsedSeconds: _elapsedSeconds));
+    Navigator.of(context).pop(
+      QuestTimerScreenResult(
+        quest: widget.quest.copyWith(elapsedSeconds: _elapsedSeconds),
+        didPauseTimer: didPauseTimer,
+      ),
+    );
   }
 
   void _startLocalTicker() {
