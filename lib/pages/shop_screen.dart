@@ -1,6 +1,7 @@
 import 'package:start_on/models/app_local_data.dart';
 import 'package:start_on/widgets/common.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart' as neu;
 
 class ShopScreen extends StatelessWidget {
   const ShopScreen({super.key, required this.data});
@@ -10,10 +11,34 @@ class ShopScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      ShopItem('오늘 면제권', '오늘 하루 퀘스트 면제', '500', Icons.receipt_long_rounded, const Color(0xFFFFE28B)),
-      ShopItem('스티커', '귀여운 캐릭터 스티커', '300', Icons.auto_awesome_rounded, const Color(0xFFAED7FF)),
-      ShopItem('캐릭터', '새로운 캐릭터 해금', '1500', Icons.bug_report_outlined, const Color(0xFFFF8B93)),
-      ShopItem('실물 상품', '특별한 굿즈', '2000', Icons.card_giftcard_rounded, const Color(0xFFD86DFF)),
+      ShopItem(
+        '오늘 면제권',
+        '오늘 하루 퀘스트 면제',
+        '500',
+        Icons.receipt_long_rounded,
+        const Color(0xFFFFE28B),
+      ),
+      ShopItem(
+        '스티커',
+        '귀여운 캐릭터 스티커',
+        '300',
+        Icons.auto_awesome_rounded,
+        const Color(0xFFAED7FF),
+      ),
+      ShopItem(
+        '캐릭터',
+        '새로운 캐릭터 해금',
+        '1500',
+        Icons.bug_report_outlined,
+        const Color(0xFFFF8B93),
+      ),
+      ShopItem(
+        '실물 상품',
+        '특별한 굿즈',
+        '2000',
+        Icons.card_giftcard_rounded,
+        const Color(0xFFD86DFF),
+      ),
     ];
 
     return ListView(
@@ -34,27 +59,32 @@ class ShopScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 6),
-
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
+            neu.Neumorphic(
+              style: neu.NeumorphicStyle(
+                depth: 7,
+                intensity: 0.9,
+                surfaceIntensity: 0.2,
                 color: const Color(0xFFFFE48A),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFFE48A).withValues(alpha: 0.32),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
+                shadowLightColor: Colors.white.withValues(alpha: 0.96),
+                shadowDarkColor: const Color(
+                  0xFFE1C468,
+                ).withValues(alpha: 0.42),
+                boxShape: neu.NeumorphicBoxShape.roundRect(
+                  BorderRadius.circular(24),
+                ),
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.monetization_on_outlined, size: 18, color: Color(0xFF745C00)),
+                  const Icon(
+                    Icons.monetization_on_outlined,
+                    size: 18,
+                    color: Color(0xFF745C00),
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     '${data.credits}',
@@ -70,7 +100,10 @@ class ShopScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 22),
-        const SectionHeading(icon: Icons.auto_awesome_outlined, title: '오늘의 추천'),
+        const SectionHeading(
+          icon: Icons.auto_awesome_outlined,
+          title: '오늘의 추천',
+        ),
         const SizedBox(height: 14),
         const VipPassCard(),
         const SizedBox(height: 22),
@@ -98,19 +131,11 @@ class VipPassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return NeumorphicRoundedCard(
       padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFF7F88),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFF7F88).withValues(alpha: 0.26),
-            blurRadius: 22,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
+      color: const Color(0xFFFF7F88),
+      shadowDarkColor: const Color(0xFFFF6B75).withValues(alpha: 0.42),
+      shadowLightColor: Colors.white.withValues(alpha: 0.9),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -118,11 +143,23 @@ class VipPassCard extends StatelessWidget {
             children: [
               const Text('👑', style: TextStyle(fontSize: 28)),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(18),
+              neu.Neumorphic(
+                style: neu.NeumorphicStyle(
+                  depth: -3,
+                  intensity: 0.92,
+                  surfaceIntensity: 0.2,
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shadowLightColor: Colors.white.withValues(alpha: 0.28),
+                  shadowDarkColor: const Color(
+                    0xFFEB6570,
+                  ).withValues(alpha: 0.42),
+                  boxShape: neu.NeumorphicBoxShape.roundRect(
+                    BorderRadius.circular(18),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
                 ),
                 child: const Text(
                   '30% OFF',
@@ -196,19 +233,30 @@ class ShopItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RoundedCard(
+    return NeumorphicRoundedCard(
       padding: const EdgeInsets.all(14),
+      color: const Color(0xFFF8FBFF),
+      shadowDarkColor: const Color(0xFFD5DDEA),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
+          neu.Neumorphic(
+            style: neu.NeumorphicStyle(
+              depth: 6,
+              intensity: 0.88,
+              surfaceIntensity: 0.22,
               color: item.color,
-              borderRadius: BorderRadius.circular(14),
+              shadowLightColor: Colors.white.withValues(alpha: 0.92),
+              shadowDarkColor: item.color.withValues(alpha: 0.42),
+              boxShape: neu.NeumorphicBoxShape.roundRect(
+                BorderRadius.circular(14),
+              ),
             ),
-            child: Icon(item.icon, color: Colors.white),
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: Icon(item.icon, color: Colors.white),
+            ),
           ),
           const SizedBox(height: 14),
           Text(
@@ -235,7 +283,11 @@ class ShopItemCard extends StatelessWidget {
           const Spacer(),
           Row(
             children: [
-              const Icon(Icons.monetization_on_outlined, size: 16, color: Color(0xFFE1C468)),
+              const Icon(
+                Icons.monetization_on_outlined,
+                size: 16,
+                color: Color(0xFFE1C468),
+              ),
               const SizedBox(width: 4),
               Text(
                 item.price,

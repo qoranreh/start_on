@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart' as neu;
 
 class AppBottomNavBar extends StatelessWidget {
   const AppBottomNavBar({
@@ -25,7 +26,7 @@ class AppBottomNavBar extends StatelessWidget {
       right: false,
       minimum: EdgeInsets.zero,
       child: BottomAppBar(
-        color: Colors.white.withValues(alpha: 0.94),
+        color: const Color(0xFFF7FBFF).withValues(alpha: 0.97),
         elevation: 14,
         surfaceTintColor: Colors.transparent,
         shadowColor: const Color(0xFFB5C4DC).withValues(alpha: 0.24),
@@ -41,11 +42,35 @@ class AppBottomNavBar extends StatelessWidget {
           height: 68,
           child: Row(
             children: [
-              Expanded(child: _NavItem(item: items[0], selected: currentIndex == 0, onTap: () => onTap(0))),
-              Expanded(child: _NavItem(item: items[1], selected: currentIndex == 1, onTap: () => onTap(1))),
+              Expanded(
+                child: _NavItem(
+                  item: items[0],
+                  selected: currentIndex == 0,
+                  onTap: () => onTap(0),
+                ),
+              ),
+              Expanded(
+                child: _NavItem(
+                  item: items[1],
+                  selected: currentIndex == 1,
+                  onTap: () => onTap(1),
+                ),
+              ),
               const SizedBox(width: 72),
-              Expanded(child: _NavItem(item: items[2], selected: currentIndex == 2, onTap: () => onTap(2))),
-              Expanded(child: _NavItem(item: items[3], selected: currentIndex == 3, onTap: () => onTap(3))),
+              Expanded(
+                child: _NavItem(
+                  item: items[2],
+                  selected: currentIndex == 2,
+                  onTap: () => onTap(2),
+                ),
+              ),
+              Expanded(
+                child: _NavItem(
+                  item: items[3],
+                  selected: currentIndex == 3,
+                  onTap: () => onTap(3),
+                ),
+              ),
             ],
           ),
         ),
@@ -79,7 +104,9 @@ class _NavItem extends StatelessWidget {
             Icon(
               item.$1,
               size: 22,
-              color: selected ? const Color(0xFFFF8B93) : const Color(0xFFA0A9B8),
+              color: selected
+                  ? const Color(0xFFFF8B93)
+                  : const Color(0xFFA0A9B8),
             ),
             const SizedBox(height: 2),
             Text(
@@ -87,7 +114,9 @@ class _NavItem extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: selected ? const Color(0xFFFF8B93) : const Color(0xFFA0A9B8),
+                color: selected
+                    ? const Color(0xFFFF8B93)
+                    : const Color(0xFFA0A9B8),
               ),
             ),
           ],
@@ -118,6 +147,50 @@ class RoundedCard extends StatelessWidget {
           ),
         ],
       ),
+      child: child,
+    );
+  }
+}
+
+class NeumorphicRoundedCard extends StatelessWidget {
+  const NeumorphicRoundedCard({
+    required this.child,
+    required this.padding,
+    super.key,
+    this.color = const Color(0xFFF7FAFF),
+    this.depth = 7,
+    this.intensity = 0.9,
+    this.surfaceIntensity = 0.18,
+    this.borderRadius = 24,
+    this.shadowDarkColor = const Color(0xFFD4DDEB),
+    this.shadowLightColor = const Color(0xFFFFFFFF),
+  });
+
+  final Widget child;
+  final EdgeInsets padding;
+  final Color color;
+  final double depth;
+  final double intensity;
+  final double surfaceIntensity;
+  final double borderRadius;
+  final Color shadowDarkColor;
+  final Color shadowLightColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return neu.Neumorphic(
+      style: neu.NeumorphicStyle(
+        depth: depth,
+        intensity: intensity,
+        surfaceIntensity: surfaceIntensity,
+        color: color,
+        shadowDarkColor: shadowDarkColor,
+        shadowLightColor: shadowLightColor,
+        boxShape: neu.NeumorphicBoxShape.roundRect(
+          BorderRadius.circular(borderRadius),
+        ),
+      ),
+      padding: padding,
       child: child,
     );
   }

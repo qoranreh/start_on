@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart' as neu;
 import 'package:start_on/models/app_local_data.dart';
 import 'package:start_on/widgets/common.dart';
 
@@ -29,7 +30,9 @@ class DungeonScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final clearedCount = _dungeons.where((item) => data.clearedDungeonIds.contains(item.id)).length;
+    final clearedCount = _dungeons
+        .where((item) => data.clearedDungeonIds.contains(item.id))
+        .length;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(22, 16, 22, 120),
@@ -43,7 +46,10 @@ class DungeonScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        const SectionHeading(icon: Icons.workspace_premium_outlined, title: '어제의 도전'),
+        const SectionHeading(
+          icon: Icons.workspace_premium_outlined,
+          title: '어제의 도전',
+        ),
         const SizedBox(height: 14),
         for (final dungeon in _dungeons) ...[
           DungeonCard(
@@ -56,7 +62,10 @@ class DungeonScreen extends StatelessWidget {
         DungeonRewardCard(
           clearedCount: clearedCount,
           totalCount: _dungeons.length,
-          totalCreditReward: _dungeons.fold(0, (sum, item) => sum + item.creditReward),
+          totalCreditReward: _dungeons.fold(
+            0,
+            (sum, item) => sum + item.creditReward,
+          ),
         ),
       ],
     );
@@ -77,19 +86,13 @@ class DungeonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return NeumorphicRoundedCard(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFE6A7),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFFFD987).withValues(alpha: 0.28),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+      color: const Color(0xFFFFE6A7),
+      borderRadius: 22,
+      surfaceIntensity: 0.24,
+      shadowDarkColor: const Color(0xFFFFD987).withValues(alpha: 0.42),
+      shadowLightColor: Colors.white.withValues(alpha: 0.9),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -105,11 +108,23 @@ class DungeonCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.75),
-                  borderRadius: BorderRadius.circular(24),
+              neu.Neumorphic(
+                style: neu.NeumorphicStyle(
+                  depth: 5,
+                  intensity: 0.88,
+                  surfaceIntensity: 0.2,
+                  color: Colors.white.withValues(alpha: 0.82),
+                  shadowLightColor: Colors.white.withValues(alpha: 0.98),
+                  shadowDarkColor: const Color(
+                    0xFFE8C870,
+                  ).withValues(alpha: 0.34),
+                  boxShape: neu.NeumorphicBoxShape.roundRect(
+                    BorderRadius.circular(24),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 9,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -135,10 +150,7 @@ class DungeonCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             '난이도: ${challenge.difficulty}',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF68553A),
-            ),
+            style: const TextStyle(fontSize: 14, color: Color(0xFF68553A)),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -179,8 +191,10 @@ class DungeonRewardCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = totalCount == 0 ? 0.0 : clearedCount / totalCount;
 
-    return RoundedCard(
+    return NeumorphicRoundedCard(
       padding: const EdgeInsets.all(20),
+      color: const Color(0xFFF8FBFF),
+      shadowDarkColor: const Color(0xFFD5DDEA),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -192,11 +206,23 @@ class DungeonRewardCard extends StatelessWidget {
                   title: '던전 보상',
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
+              neu.Neumorphic(
+                style: neu.NeumorphicStyle(
+                  depth: 6,
+                  intensity: 0.9,
+                  surfaceIntensity: 0.2,
                   color: const Color(0xFFFFE48A),
-                  borderRadius: BorderRadius.circular(24),
+                  shadowLightColor: Colors.white.withValues(alpha: 0.96),
+                  shadowDarkColor: const Color(
+                    0xFFE1C468,
+                  ).withValues(alpha: 0.42),
+                  boxShape: neu.NeumorphicBoxShape.roundRect(
+                    BorderRadius.circular(24),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -227,7 +253,9 @@ class DungeonRewardCard extends StatelessWidget {
               minHeight: 8,
               value: progress,
               backgroundColor: const Color(0xFFE8ECF3),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFF8B93)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFFFF8B93),
+              ),
             ),
           ),
           const SizedBox(height: 10),

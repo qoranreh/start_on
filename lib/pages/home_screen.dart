@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart' as neu;
 import 'package:intl/intl.dart';
 import 'package:start_on/models/app_local_data.dart';
 import 'package:start_on/pages/home/home_screen_sections.dart';
@@ -91,6 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 18),
         HomeQuestSectionHeader(
           onOpenAutoAdd: widget.onOpenAutoQuestFromGallery,
+          questCount: widget.data.quests.length,
         ),
         const SizedBox(height: 14),
         HomeQuestList(
@@ -101,10 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         if (todayCompletedQuests.isNotEmpty) ...[
           const SizedBox(height: 8),
-          ClipRect(
-            child: Align(
+          if (completedQuestRevealProgress > 0)
+            Align(
               alignment: Alignment.topCenter,
-              heightFactor: completedQuestRevealProgress,
               child: Opacity(
                 opacity: completedQuestRevealProgress,
                 child: Transform.translate(
@@ -115,7 +116,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-          ),
         ],
       ],
     );
@@ -160,11 +160,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final quests = widget.data.quests
         .where((item) => item.category == category)
         .toList();
+    final completedRecords = widget.data.completedQuests
+        .where((item) => item.category == category)
+        .toList()
+        .reversed
+        .toList();
     final result = await showDialog<Object?>(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.22),
-      builder: (context) =>
-          _CategoryQuestDialog(category: category, quests: quests),
+      builder: (context) => _CategoryQuestDialog(
+        category: category,
+        quests: quests,
+        completedRecords: completedRecords,
+      ),
     );
 
     if (!mounted || result == null) {
@@ -246,14 +254,20 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _CategoryQuestDialog extends StatelessWidget {
-  const _CategoryQuestDialog({required this.category, required this.quests});
+  const _CategoryQuestDialog({
+    required this.category,
+    required this.quests,
+    required this.completedRecords,
+  });
 
   final String category;
   final List<QuestItem> quests;
+  final List<CompletedQuestRecord> completedRecords;
 
   @override
   Widget build(BuildContext context) {
     final style = questCategoryStyleFor(category);
+    final totalCount = quests.length + completedRecords.length;
 
     return Dialog(
       backgroundColor: style.backgroundColor,
@@ -298,7 +312,7 @@ class _CategoryQuestDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${quests.length}개의 퀘스트',
+                          '${quests.length} 진행 중 · ${completedRecords.length} 완료',
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -316,7 +330,7 @@ class _CategoryQuestDialog extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 18),
-              if (quests.isEmpty)
+              if (totalCount == 0)
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(20),
@@ -355,14 +369,39 @@ class _CategoryQuestDialog extends StatelessWidget {
                 )
               else
                 Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (var i = 0; i < quests.length; i++) ...[
-                      _CategoryQuestTile(
-                        quest: quests[i],
+                    if (quests.isNotEmpty) ...[
+                      _CategoryDialogSectionLabel(
+                        label: '진행 중',
                         accentColor: style.accentColor,
-                        onTap: () => Navigator.of(context).pop(quests[i]),
                       ),
-                      if (i != quests.length - 1) const SizedBox(height: 10),
+                      const SizedBox(height: 10),
+                      for (var i = 0; i < quests.length; i++) ...[
+                        _CategoryQuestTile(
+                          quest: quests[i],
+                          accentColor: style.accentColor,
+                          onTap: () => Navigator.of(context).pop(quests[i]),
+                        ),
+                        if (i != quests.length - 1) const SizedBox(height: 10),
+                      ],
+                    ],
+                    if (quests.isNotEmpty && completedRecords.isNotEmpty)
+                      const SizedBox(height: 18),
+                    if (completedRecords.isNotEmpty) ...[
+                      _CategoryDialogSectionLabel(
+                        label: '완료',
+                        accentColor: style.accentColor,
+                      ),
+                      const SizedBox(height: 10),
+                      for (var i = 0; i < completedRecords.length; i++) ...[
+                        _CompletedCategoryQuestTile(
+                          record: completedRecords[i],
+                          accentColor: style.accentColor,
+                        ),
+                        if (i != completedRecords.length - 1)
+                          const SizedBox(height: 10),
+                      ],
                     ],
                   ],
                 ),
@@ -408,55 +447,159 @@ class _CategoryQuestTile extends StatelessWidget {
       '보통' => '중간',
       _ => quest.difficulty,
     };
+    final baseColor = Color.alphaBlend(
+      accentColor.withValues(alpha: 0.08),
+      Colors.white.withValues(alpha: 0.9),
+    );
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.88),
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      quest.title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF243248),
-                      ),
+    return GestureDetector(
+      onTap: onTap,
+      child: neu.Neumorphic(
+        style: neu.NeumorphicStyle(
+          depth: 7,
+          intensity: 0.9,
+          surfaceIntensity: 0.24,
+          color: baseColor,
+          shadowLightColor: Colors.white.withValues(alpha: 0.98),
+          shadowDarkColor: accentColor.withValues(alpha: 0.28),
+          boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(18)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    quest.title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF243248),
                     ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _CategoryDialogMetaChip(
-                          label:
-                              '$difficultyLabel:${quest.defaultDurationSeconds ~/ 60}분',
-                          accentColor: accentColor,
-                        ),
-                      ],
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _CategoryDialogMetaChip(
+                        label:
+                            '$difficultyLabel:${quest.defaultDurationSeconds ~/ 60}분',
+                        accentColor: accentColor,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: accentColor.withValues(alpha: 0.76),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryDialogSectionLabel extends StatelessWidget {
+  const _CategoryDialogSectionLabel({
+    required this.label,
+    required this.accentColor,
+  });
+
+  final String label;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w800,
+        color: accentColor.withValues(alpha: 0.86),
+      ),
+    );
+  }
+}
+
+class _CompletedCategoryQuestTile extends StatelessWidget {
+  const _CompletedCategoryQuestTile({
+    required this.record,
+    required this.accentColor,
+  });
+
+  final CompletedQuestRecord record;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final difficultyLabel = switch (record.difficulty) {
+      '보통' => '중간',
+      _ => record.difficulty,
+    };
+    final completedAt = DateTime.tryParse(record.completedAt)?.toLocal();
+    final completedLabel = completedAt == null
+        ? '완료'
+        : '${completedAt.month}/${completedAt.day} 완료';
+
+    return neu.Neumorphic(
+      style: neu.NeumorphicStyle(
+        depth: 7,
+        intensity: 0.92,
+        surfaceIntensity: 0.28,
+        color: Color.alphaBlend(
+          accentColor.withValues(alpha: 0.2),
+          Colors.white.withValues(alpha: 0.9),
+        ),
+        shadowLightColor: Colors.white.withValues(alpha: 0.96),
+        shadowDarkColor: accentColor.withValues(alpha: 0.34),
+        boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(18)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  record.title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF243248),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _CategoryDialogMetaChip(
+                      label: '$difficultyLabel:${record.elapsedSeconds ~/ 60}분',
+                      accentColor: accentColor,
+                    ),
+                    _CategoryDialogMetaChip(
+                      label: completedLabel,
+                      accentColor: accentColor,
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: accentColor.withValues(alpha: 0.76),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          Icon(
+            Icons.check_circle_rounded,
+            color: accentColor.withValues(alpha: 0.88),
+          ),
+        ],
       ),
     );
   }

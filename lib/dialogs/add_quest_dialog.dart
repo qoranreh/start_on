@@ -1,5 +1,6 @@
 import 'package:start_on/models/app_local_data.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart' as neu;
 
 //퀘스트 추가dialog
 class AddQuestDialog extends StatefulWidget {
@@ -7,8 +8,8 @@ class AddQuestDialog extends StatefulWidget {
     super.key,
     this.initialCategory,
     this.initialQuest,
-    this.title = '새 퀘스트 추가',
-    this.submitLabel = '추가',
+    this.title = 'Create New Task',
+    this.submitLabel = 'Create',
   });
 
   final String? initialCategory;
@@ -56,6 +57,19 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
       _difficulty,
     );
     final categoryStyle = questCategoryStyleFor(_category);
+    final hasTitleText = _controller.text.trim().isNotEmpty;
+    final insetLightShadow = Color.alphaBlend(
+      Colors.white.withValues(alpha: 0.88),
+      categoryStyle.backgroundColor,
+    );
+    final insetDarkShadow = Color.alphaBlend(
+      categoryStyle.accentColor.withValues(alpha: 0.44),
+      categoryStyle.backgroundColor,
+    );
+    final raisedFill = Color.alphaBlend(
+      categoryStyle.accentColor.withValues(alpha: 0.12),
+      categoryStyle.backgroundColor,
+    );
 
     return Dialog(
       backgroundColor: categoryStyle.backgroundColor,
@@ -99,7 +113,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
               ),
               const SizedBox(height: 8),
               const Text(
-                '퀘스트 이름',
+                'Title',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -107,35 +121,46 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                 ),
               ),
               const SizedBox(height: 10),
-              TextField(
-                controller: _controller,
-                decoration: InputDecoration(
-                  hintText: '예: 아침 운동하기',
-                  filled: true,
-                  fillColor: Colors.white.withValues(alpha: 0.92),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 18,
+              neu.Neumorphic(
+                style: neu.NeumorphicStyle(
+                  depth: hasTitleText ? 8 : -3,
+                  intensity: hasTitleText ? 0.88 : 0.92,
+                  surfaceIntensity: hasTitleText ? 0.26 : 0.28,
+                  color: hasTitleText
+                      ? raisedFill
+                      : categoryStyle.backgroundColor,
+                  shadowLightColor: hasTitleText
+                      ? Colors.white.withValues(alpha: 0.98)
+                      : insetLightShadow,
+                  shadowDarkColor: hasTitleText
+                      ? categoryStyle.accentColor.withValues(alpha: 0.4)
+                      : insetDarkShadow,
+                  boxShape: neu.NeumorphicBoxShape.roundRect(
+                    BorderRadius.circular(18),
                   ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide(
-                      color: categoryStyle.accentColor.withValues(alpha: 0.34),
-                      width: 2,
-                    ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: TextField(
+                  controller: _controller,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                    hintText: '예: 아침 운동하기',
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 18),
+                    isCollapsed: true,
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide(
-                      color: categoryStyle.accentColor,
-                      width: 2,
-                    ),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF33415C),
                   ),
                 ),
               ),
               const SizedBox(height: 18),
               const Text(
-                '난이도',
+                'Level',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -147,6 +172,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                 values: const ['쉬움', '보통', '어려움'],
                 selected: _difficulty,
                 selectedColor: categoryStyle.accentColor,
+                backgroundColor: categoryStyle.backgroundColor,
                 onSelected: (value) => setState(() => _difficulty = value),
               ),
               const SizedBox(height: 10),
@@ -160,7 +186,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
               ),
               const SizedBox(height: 18),
               const Text(
-                '카테고리',
+                'Category',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -172,42 +198,25 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                 values: questCategories,
                 selected: _category,
                 selectedColor: categoryStyle.accentColor,
+                backgroundColor: categoryStyle.backgroundColor,
                 labelBuilder: questCategoryLabel,
                 onSelected: (value) => setState(() => _category = value),
               ),
               const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.tonal(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F3F8),
-                        foregroundColor: const Color(0xFF667085),
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                      ),
-                      child: const Text('취소'),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _submit,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: categoryStyle.accentColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _submit,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: categoryStyle.accentColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                      ),
-                      child: Text(widget.submitLabel),
-                    ),
-                  ),
-                ],
+                  child: Text(widget.submitLabel),
+                ),
               ),
             ],
           ),
@@ -268,6 +277,7 @@ class ChoiceRow extends StatelessWidget {
     required this.values,
     required this.selected,
     required this.selectedColor,
+    required this.backgroundColor,
     required this.onSelected,
     this.labelBuilder,
     super.key,
@@ -276,6 +286,7 @@ class ChoiceRow extends StatelessWidget {
   final List<String> values;
   final String selected;
   final Color selectedColor;
+  final Color backgroundColor;
   final ValueChanged<String> onSelected;
   final String Function(String value)? labelBuilder;
 
@@ -287,23 +298,9 @@ class ChoiceRow extends StatelessWidget {
           Expanded(
             child: GestureDetector(
               onTap: () => onSelected(values[i]),
-              child: Container(
+              child: neu.Neumorphic(
+                style: _styleFor(values[i] == selected),
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: values[i] == selected
-                      ? selectedColor
-                      : const Color(0xFFF1F3F8),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: values[i] == selected
-                      ? [
-                          BoxShadow(
-                            color: selectedColor.withValues(alpha: 0.25),
-                            blurRadius: 14,
-                            offset: const Offset(0, 8),
-                          ),
-                        ]
-                      : null,
-                ),
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -314,7 +311,7 @@ class ChoiceRow extends StatelessWidget {
                         maxLines: 1,
                         style: TextStyle(
                           color: values[i] == selected
-                              ? Colors.white
+                              ? selectedColor
                               : const Color(0xFF667085),
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -329,6 +326,35 @@ class ChoiceRow extends StatelessWidget {
           if (i != values.length - 1) const SizedBox(width: 10),
         ],
       ],
+    );
+  }
+
+  neu.NeumorphicStyle _styleFor(bool isSelected) {
+    final selectedFill = Color.alphaBlend(
+      selectedColor.withValues(alpha: 0.16),
+      backgroundColor,
+    );
+    final insetLightShadow = Color.alphaBlend(
+      Colors.white.withValues(alpha: 0.88),
+      backgroundColor,
+    );
+    final insetDarkShadow = Color.alphaBlend(
+      selectedColor.withValues(alpha: 0.34),
+      backgroundColor,
+    );
+
+    return neu.NeumorphicStyle(
+      depth: isSelected ? 3 : -3,
+      intensity: isSelected ? 0.88 : 0.94,
+      surfaceIntensity: isSelected ? 0.32 : 0.22,
+      color: isSelected ? selectedFill : backgroundColor,
+      shadowLightColor: isSelected
+          ? Colors.white.withValues(alpha: 0.98)
+          : insetLightShadow,
+      shadowDarkColor: isSelected
+          ? selectedColor.withValues(alpha: 0.42)
+          : insetDarkShadow,
+      boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(16)),
     );
   }
 }

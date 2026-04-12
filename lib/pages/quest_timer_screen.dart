@@ -50,6 +50,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   StreamSubscription<QuestTimerSnapshot>? _questTimerTickSubscription;
   XFile? _proofImage;
   int _elapsedSeconds = 0;
+  int _timerViewRevision = 0;
   bool _hasStarted = false;
   bool _running = false;
   bool _isCompleting = false;
@@ -114,6 +115,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
                   controller: _countDownController,
                   durationSeconds: maxDurationSeconds,
                   elapsedSeconds: _elapsedSeconds,
+                  timerViewRevision: _timerViewRevision,
                   running: _running,
                   onComplete: _handleTimerComplete,
                   formatDuration: _formatDuration,
@@ -121,8 +123,10 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
                 actionButtons: QuestTimerActionButtons(
                   isCompleting: _isCompleting,
                   running: _running,
+                  canReset: _elapsedSeconds > 0,
+                  onResetTimer: _resetTimer,
                   onToggleTimer: _toggleTimer,
-                  onCompleteQuest: _completeQuest,
+                  onStopTimer: _completeQuest,
                 ),
                 proofSection: QuestTimerProofSection(
                   proofImagePath: _proofImage?.path,
@@ -140,15 +144,18 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   }
 
   void _handleTimerComplete() {
-    if (!mounted) {
+    if (!mounted || _isCompleting) {
       return;
     }
-    // 최대 시간 이후에도 실제 진행시간은 계속 누적하고, 원형 게이지만 꽉 찬 상태로 둡니다.
-    setState(() {});
+    unawaited(_completeQuest());
   }
 
   void _toggleTimer() {
     unawaited(_toggleTimerAsync());
+  }
+
+  void _resetTimer() {
+    unawaited(_resetTimerAsync());
   }
 
   Future<void> _toggleTimerAsync() async {
@@ -213,6 +220,29 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
       return;
     }
     setState(() => _running = true);
+  }
+
+  Future<void> _resetTimerAsync() async {
+    if (_running && _elapsedSeconds < widget.quest.defaultDurationSeconds) {
+      _countDownController.pause();
+    }
+
+    _stopLocalTicker();
+
+    if (widget.notificationsEnabled) {
+      await _questTimerService.stopTimer();
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _elapsedSeconds = 0;
+      _hasStarted = false;
+      _running = false;
+      _timerViewRevision += 1;
+    });
   }
 
   Future<void> _pickProofImage(ImageSource source) async {
