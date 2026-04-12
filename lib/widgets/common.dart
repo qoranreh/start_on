@@ -15,8 +15,8 @@ class AppBottomNavBar extends StatelessWidget {
     const items = [
       (Icons.home_outlined, '홈'),
       (Icons.sports_martial_arts_rounded, '던전'),
-      (Icons.person_outline_rounded, '내정보'),
       (Icons.storefront_outlined, '상점'),
+      (Icons.receipt_long_outlined, '기록'),
     ];
 
     return SafeArea(

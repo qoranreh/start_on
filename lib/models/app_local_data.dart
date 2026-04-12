@@ -158,6 +158,7 @@ class AppLocalData {
     required this.recentActivities,
     required this.completedQuests,
     required this.quests,
+    required this.clearedDungeonIds,
     required this.previousWeeklyCompletionRate,
     required this.dailyResetKey,
     required this.weeklyResetKey,
@@ -190,6 +191,7 @@ class AppLocalData {
   final List<RecentActivity> recentActivities;
   final List<CompletedQuestRecord> completedQuests;
   final List<QuestItem> quests;
+  final List<String> clearedDungeonIds;
   final int previousWeeklyCompletionRate;
   final String dailyResetKey;
   final String weeklyResetKey;
@@ -223,6 +225,7 @@ class AppLocalData {
       recentActivities: const [],
       completedQuests: const [],
       quests: const [],
+      clearedDungeonIds: const [],
       previousWeeklyCompletionRate: 0,
       dailyResetKey: '',
       weeklyResetKey: '',
@@ -257,6 +260,7 @@ class AppLocalData {
     List<RecentActivity>? recentActivities,
     List<CompletedQuestRecord>? completedQuests,
     List<QuestItem>? quests,
+    List<String>? clearedDungeonIds,
     int? previousWeeklyCompletionRate,
     String? dailyResetKey,
     String? weeklyResetKey,
@@ -289,6 +293,7 @@ class AppLocalData {
       recentActivities: recentActivities ?? this.recentActivities,
       completedQuests: completedQuests ?? this.completedQuests,
       quests: quests ?? this.quests,
+      clearedDungeonIds: clearedDungeonIds ?? this.clearedDungeonIds,
       previousWeeklyCompletionRate: previousWeeklyCompletionRate ?? this.previousWeeklyCompletionRate,
       dailyResetKey: dailyResetKey ?? this.dailyResetKey,
       weeklyResetKey: weeklyResetKey ?? this.weeklyResetKey,
@@ -324,6 +329,7 @@ class AppLocalData {
       'recentActivities': recentActivities.map((item) => item.toJson()).toList(),
       'completedQuests': completedQuests.map((item) => item.toJson()).toList(),
       'quests': quests.map((item) => item.toJson()).toList(),
+      'clearedDungeonIds': clearedDungeonIds,
       'previousWeeklyCompletionRate': previousWeeklyCompletionRate,
       'dailyResetKey': dailyResetKey,
       'weeklyResetKey': weeklyResetKey,
@@ -369,6 +375,9 @@ class AppLocalData {
           .toList(),
       quests: ((json['quests'] as List<dynamic>?) ?? const [])
           .map((item) => QuestItem.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList(),
+      clearedDungeonIds: ((json['clearedDungeonIds'] as List<dynamic>?) ?? const [])
+          .map((item) => item as String)
           .toList(),
       previousWeeklyCompletionRate:
           json['previousWeeklyCompletionRate'] as int? ?? defaults.previousWeeklyCompletionRate,

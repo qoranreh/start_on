@@ -95,7 +95,6 @@ class LocalDataStore {
       level: nextLevelState.level,
       currentExp: nextLevelState.currentExp,
       maxExp: nextLevelState.maxExp,
-      credits: normalized.credits + math.max(1, record.earnedExp ~/ 10),
       completedQuestCount: normalized.completedQuestCount + 1,
       earnedExp: normalized.earnedExp + record.earnedExp,
       dailyRewardCount: math.min(normalized.dailyRewardTarget, normalized.dailyRewardCount + 1),
@@ -113,6 +112,22 @@ class LocalDataStore {
       recentActivities: recentActivities,
       completedQuests: completedQuests,
       quests: normalized.quests.where((item) => item.id != record.questId).toList(),
+    );
+  }
+
+  AppLocalData completeDungeon(
+    AppLocalData currentData, {
+    required String dungeonId,
+    required int creditReward,
+  }) {
+    final normalized = _normalizeForDate(currentData);
+    if (normalized.clearedDungeonIds.contains(dungeonId)) {
+      return normalized;
+    }
+
+    return normalized.copyWith(
+      credits: normalized.credits + creditReward,
+      clearedDungeonIds: [...normalized.clearedDungeonIds, dungeonId],
     );
   }
 

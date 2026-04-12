@@ -4,7 +4,6 @@ import 'package:start_on/dialogs/add_quest_dialog.dart';
 import 'package:start_on/models/app_local_data.dart';
 import 'package:start_on/pages/dungeon_screen.dart';
 import 'package:start_on/pages/home_screen.dart';
-import 'package:start_on/pages/profile_screen.dart';
 import 'package:start_on/pages/quest_timer_screen.dart';
 import 'package:start_on/pages/record_screen.dart';
 import 'package:start_on/pages/shop_screen.dart';
@@ -85,12 +84,12 @@ class _AdFocusShellState extends State<AdFocusShell> {
         onDeleteQuest: _deleteQuest,
         onTabChange: _changeTab,
       ),
-      const DungeonScreen(),
-      ProfileScreen(
+      DungeonScreen(
         data: _localData,
-        onOpenRecord: _openRecordScreen,
+        onClearDungeon: _completeDungeon,
       ),
       ShopScreen(data: _localData),
+      RecordScreen(data: _localData),
     ];
 
     return Scaffold(
@@ -184,10 +183,22 @@ class _AdFocusShellState extends State<AdFocusShell> {
     );
   }
 
-  Future<void> _openRecordScreen() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => RecordScreen(data: _localData),
+  void _completeDungeon(String dungeonId) {
+    const dungeonRewards = {
+      'dungeon_meditation': 8,
+      'dungeon_evening_workout': 12,
+    };
+
+    final reward = dungeonRewards[dungeonId];
+    if (reward == null) {
+      return;
+    }
+
+    _setLocalData(
+      _store.completeDungeon(
+        _localData,
+        dungeonId: dungeonId,
+        creditReward: reward,
       ),
     );
   }

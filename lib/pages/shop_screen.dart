@@ -34,13 +34,7 @@ class ShopScreen extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: 6),
-                  Text(
-                    '아이템으로 더 강해지세요',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF7E899D),
-                    ),
-                  ),
+
                 ],
               ),
             ),
