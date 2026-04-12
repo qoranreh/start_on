@@ -62,11 +62,7 @@ class _AdFocusShellState extends State<AdFocusShell> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xFFFFF8EF),
-                Color(0xFFF7FBFF),
-                Color(0xFFFFF0F3),
-              ],
+              colors: [Color(0xFFFFF8EF), Color(0xFFF7FBFF), Color(0xFFFFF0F3)],
             ),
           ),
           child: const Center(
@@ -84,10 +80,7 @@ class _AdFocusShellState extends State<AdFocusShell> {
         onDeleteQuest: _deleteQuest,
         onTabChange: _changeTab,
       ),
-      DungeonScreen(
-        data: _localData,
-        onClearDungeon: _completeDungeon,
-      ),
+      DungeonScreen(data: _localData, onClearDungeon: _completeDungeon),
       ShopScreen(data: _localData),
       RecordScreen(data: _localData),
     ];
@@ -99,11 +92,7 @@ class _AdFocusShellState extends State<AdFocusShell> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFFFF8EF),
-              Color(0xFFF7FBFF),
-              Color(0xFFFFF0F3),
-            ],
+            colors: [Color(0xFFFFF8EF), Color(0xFFF7FBFF), Color(0xFFFFF0F3)],
           ),
         ),
         child: SafeArea(child: screens[_currentIndex]),
@@ -151,20 +140,14 @@ class _AdFocusShellState extends State<AdFocusShell> {
       return;
     }
 
-    _setLocalData(
-      _localData.copyWith(
-        quests: [quest, ..._localData.quests],
-      ),
-    );
+    _setLocalData(_localData.copyWith(quests: [quest, ..._localData.quests]));
   }
 
   Future<void> _openQuestTimer(QuestItem quest) async {
-    final result = await Navigator.of(context).push<CompletedQuestRecord>(
-      MaterialPageRoute<CompletedQuestRecord>(
-        builder: (_) => QuestTimerScreen(
-          quest: quest,
-          onDelete: () => _deleteQuest(quest),
-        ),
+    final result = await Navigator.of(context).push<Object?>(
+      MaterialPageRoute<Object?>(
+        builder: (_) =>
+            QuestTimerScreen(quest: quest, onDelete: () => _deleteQuest(quest)),
       ),
     );
 
@@ -172,13 +155,30 @@ class _AdFocusShellState extends State<AdFocusShell> {
       return;
     }
 
-    _setLocalData(_store.completeQuest(_localData, result));
+    if (result case CompletedQuestRecord completedRecord) {
+      _setLocalData(_store.completeQuest(_localData, completedRecord));
+      return;
+    }
+
+    if (result case QuestItem updatedQuest) {
+      _updateQuest(updatedQuest);
+    }
   }
 
   void _deleteQuest(QuestItem quest) {
     _setLocalData(
       _localData.copyWith(
         quests: _localData.quests.where((item) => item.id != quest.id).toList(),
+      ),
+    );
+  }
+
+  void _updateQuest(QuestItem updatedQuest) {
+    _setLocalData(
+      _localData.copyWith(
+        quests: _localData.quests
+            .map((item) => item.id == updatedQuest.id ? updatedQuest : item)
+            .toList(),
       ),
     );
   }

@@ -30,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // 오늘 날짜 기준으로 헤더 문구와 완료 퀘스트 목록을 계산합니다.
     final now = DateTime.now();
     final todayLabel = 'Today ${DateFormat('d MMMM').format(now)}';
+    final categoryCounts = _categoryCounts(widget.data.quests);
     final todayCompletedQuests = _todayCompletedQuests(
       records: widget.data.completedQuests,
       now: now,
@@ -41,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         HomeHeaderSection(todayLabel: todayLabel),
         const SizedBox(height: 18),
-        const HomeCategoryGrid(),
+        HomeCategoryGrid(categoryCounts: categoryCounts),
         const SizedBox(height: 18),
         const HomeQuestSectionHeader(),
         const SizedBox(height: 14),
@@ -70,5 +71,15 @@ class _HomeScreenState extends State<HomeScreen> {
           completedAt.month == now.month &&
           completedAt.day == now.day;
     }).toList();
+  }
+
+  Map<String, int> _categoryCounts(List<QuestItem> quests) {
+    final counts = <String, int>{'work': 0, 'exercise': 0, 'A&I': 0, 'todo': 0};
+
+    for (final quest in quests) {
+      counts.update(quest.category, (value) => value + 1, ifAbsent: () => 1);
+    }
+
+    return counts;
   }
 }

@@ -1,5 +1,6 @@
 import 'package:start_on/models/app_local_data.dart';
 import 'package:flutter/material.dart';
+
 //퀘스트 추가dialog
 class AddQuestDialog extends StatefulWidget {
   const AddQuestDialog({super.key});
@@ -23,6 +24,9 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
   @override
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.of(context).viewInsets;
+    final defaultDurationSeconds = defaultQuestDurationSecondsForDifficulty(
+      _difficulty,
+    );
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
@@ -51,7 +55,10 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded, color: Color(0xFF95A0B4)),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Color(0xFF95A0B4),
+                    ),
                   ),
                 ],
               ),
@@ -71,14 +78,23 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                   hintText: '예: 아침 운동하기',
                   filled: true,
                   fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 18,
+                  ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: Color(0xFFFF9EA5), width: 2),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFFF9EA5),
+                      width: 2,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(color: Color(0xFFFF7F88), width: 2),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFFF7F88),
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -97,6 +113,15 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                 selected: _difficulty,
                 selectedColor: const Color(0xFFFF8B93),
                 onSelected: (value) => setState(() => _difficulty = value),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '진행시간 : ${_formatMinutesLabel(defaultDurationSeconds)}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF7E899D),
+                ),
               ),
               const SizedBox(height: 18),
               const Text(
@@ -174,8 +199,16 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
         exp: exp,
         difficulty: _difficulty,
         category: _category,
+        elapsedSeconds: 0,
+        defaultDurationSeconds: defaultQuestDurationSecondsForDifficulty(
+          _difficulty,
+        ),
       ),
     );
+  }
+
+  String _formatMinutesLabel(int seconds) {
+    return '${seconds ~/ 60}분';
   }
 }
 
@@ -185,6 +218,7 @@ class ChoiceRow extends StatelessWidget {
     required this.selected,
     required this.selectedColor,
     required this.onSelected,
+    this.labelBuilder,
     super.key,
   });
 
@@ -192,6 +226,7 @@ class ChoiceRow extends StatelessWidget {
   final String selected;
   final Color selectedColor;
   final ValueChanged<String> onSelected;
+  final String Function(String value)? labelBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +239,9 @@ class ChoiceRow extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: values[i] == selected ? selectedColor : const Color(0xFFF1F3F8),
+                  color: values[i] == selected
+                      ? selectedColor
+                      : const Color(0xFFF1F3F8),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: values[i] == selected
                       ? [
@@ -222,10 +259,12 @@ class ChoiceRow extends StatelessWidget {
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                        values[i],
+                        labelBuilder?.call(values[i]) ?? values[i],
                         maxLines: 1,
                         style: TextStyle(
-                          color: values[i] == selected ? Colors.white : const Color(0xFF667085),
+                          color: values[i] == selected
+                              ? Colors.white
+                              : const Color(0xFF667085),
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),

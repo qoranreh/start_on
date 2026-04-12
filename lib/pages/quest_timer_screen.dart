@@ -22,7 +22,6 @@ class QuestTimerScreen extends StatefulWidget {
 }
 
 class _QuestTimerScreenState extends State<QuestTimerScreen> {
-  static const int _defaultTimerSeconds = 60 * 60;
   static const int _minimumRewardSeconds = 10 * 60;
 
   // 타이머 제어, 이미지 선택, 인증 이미지 저장을 담당하는 객체들.
@@ -39,6 +38,12 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   bool _isCompleting = false;
 
   @override
+  void initState() {
+    super.initState();
+    _elapsedSeconds = widget.quest.elapsedSeconds;
+  }
+
+  @override
   void dispose() {
     _ticker?.cancel();
     super.dispose();
@@ -46,49 +51,61 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF7FAFF),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(22, 16, 22, 32),
-          children: [
-            QuestTimerHeader(
-              onBack: () => Navigator.of(context).pop(),
-              onDelete: () {
-                widget.onDelete();
-                Navigator.of(context).pop();
-              },
-            ),
-            const SizedBox(height: 18),
-            // 메인 카드 안에서 퀘스트 정보, 타이머, 액션, 인증 사진 흐름을 순서대로 보여준다.
-            QuestTimerContentCard(
-              questSummary: QuestTimerSummary(
-                quest: widget.quest,
-                earnedExp: _calculateEarnedExp(),
+    final maxDurationSeconds = widget.quest.defaultDurationSeconds;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          return;
+        }
+        _popWithProgress();
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF7FAFF),
+        body: SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(22, 16, 22, 32),
+            children: [
+              QuestTimerHeader(
+                onBack: _popWithProgress,
+                onDelete: () {
+                  widget.onDelete();
+                  Navigator.of(context).pop();
+                },
               ),
-              countdown: QuestTimerCountdown(
-                controller: _countDownController,
-                durationSeconds: _defaultTimerSeconds,
-                elapsedSeconds: _elapsedSeconds,
-                running: _running,
-                onComplete: _handleTimerComplete,
-                formatDuration: _formatDuration,
+              const SizedBox(height: 18),
+              // 메인 카드 안에서 퀘스트 정보, 타이머, 액션, 인증 사진 흐름을 순서대로 보여준다.
+              QuestTimerContentCard(
+                questSummary: QuestTimerSummary(
+                  quest: widget.quest,
+                  earnedExp: _calculateEarnedExp(),
+                  maxDurationSeconds: maxDurationSeconds,
+                ),
+                countdown: QuestTimerCountdown(
+                  controller: _countDownController,
+                  durationSeconds: maxDurationSeconds,
+                  elapsedSeconds: _elapsedSeconds,
+                  running: _running,
+                  onComplete: _handleTimerComplete,
+                  formatDuration: _formatDuration,
+                ),
+                actionButtons: QuestTimerActionButtons(
+                  isCompleting: _isCompleting,
+                  running: _running,
+                  onToggleTimer: _toggleTimer,
+                  onCompleteQuest: _completeQuest,
+                ),
+                proofSection: QuestTimerProofSection(
+                  proofImagePath: _proofImage?.path,
+                  isCompleting: _isCompleting,
+                  onPickCamera: () => _pickProofImage(ImageSource.camera),
+                  onPickGallery: () => _pickProofImage(ImageSource.gallery),
+                  onClearImage: () => setState(() => _proofImage = null),
+                ),
               ),
-              actionButtons: QuestTimerActionButtons(
-                isCompleting: _isCompleting,
-                running: _running,
-                onToggleTimer: _toggleTimer,
-                onCompleteQuest: _completeQuest,
-              ),
-              proofSection: QuestTimerProofSection(
-                proofImagePath: _proofImage?.path,
-                isCompleting: _isCompleting,
-                onPickCamera: () => _pickProofImage(ImageSource.camera),
-                onPickGallery: () => _pickProofImage(ImageSource.gallery),
-                onClearImage: () => setState(() => _proofImage = null),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -98,32 +115,24 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
     if (!mounted) {
       return;
     }
-    _stopLocalTicker();
-    setState(() {
-      _running = false;
-      _elapsedSeconds = _defaultTimerSeconds;
-    });
+    // 최대 시간 이후에도 실제 진행시간은 계속 누적하고, 원형 게이지만 꽉 찬 상태로 둡니다.
+    setState(() {});
   }
 
   void _toggleTimer() {
     // 진행 중이면 일시정지, 끝까지 찼으면 초기화 후 재시작, 그 외에는 시작/재개.
     if (_running) {
-      _countDownController.pause();
+      if (_elapsedSeconds < widget.quest.defaultDurationSeconds) {
+        _countDownController.pause();
+      }
       _stopLocalTicker();
       setState(() => _running = false);
       return;
     }
 
-    if (_elapsedSeconds == _defaultTimerSeconds) {
-      _stopLocalTicker();
-      setState(() {
-        _elapsedSeconds = 0;
-        _hasStarted = false;
-        _running = true;
-      });
-      _countDownController.restart(duration: _defaultTimerSeconds);
-      _hasStarted = true;
+    if (_elapsedSeconds >= widget.quest.defaultDurationSeconds) {
       _startLocalTicker();
+      setState(() => _running = true);
       return;
     }
 
@@ -197,6 +206,20 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
     return _elapsedSeconds ~/ 60;
   }
 
+  void _popWithProgress() {
+    if (_running) {
+      if (_elapsedSeconds < widget.quest.defaultDurationSeconds) {
+        _countDownController.pause();
+      }
+      _stopLocalTicker();
+      _running = false;
+    }
+
+    Navigator.of(
+      context,
+    ).pop(widget.quest.copyWith(elapsedSeconds: _elapsedSeconds));
+  }
+
   void _startLocalTicker() {
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -204,9 +227,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
         return;
       }
       setState(() {
-        if (_elapsedSeconds < _defaultTimerSeconds) {
-          _elapsedSeconds += 1;
-        }
+        _elapsedSeconds += 1;
       });
     });
   }
