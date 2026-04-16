@@ -25,6 +25,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isNotionSyncBusy = false;
   String _notionDatabaseId = '';
   String _notionDatabaseTitle = '';
+  String _notionApiTokenDraft = '';
+  String _notionDatabaseInputDraft = '';
 
   @override
   void initState() {
@@ -221,11 +223,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isNotionSyncEnabled = settings.notionSyncEnabled;
       _notionDatabaseId = settings.notionDatabaseId;
       _notionDatabaseTitle = settings.notionDatabaseTitle;
+      _notionApiTokenDraft = settings.notionApiToken;
+      _notionDatabaseInputDraft = settings.notionDatabaseId;
     });
   }
 
   Future<bool> _connectNotion() async {
-    final settings = await _settingsStore.load();
     if (!mounted) {
       return false;
     }
@@ -233,14 +236,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       barrierDismissible: !_isNotionSyncBusy,
       builder: (_) => _NotionConnectDialog(
-        initialApiToken: settings.notionApiToken,
-        initialDatabaseInput: settings.notionDatabaseId,
+        initialApiToken: _notionApiTokenDraft,
+        initialDatabaseInput: _notionDatabaseInputDraft,
+        onDraftChanged: (draft) {
+          _notionApiTokenDraft = draft.apiToken;
+          _notionDatabaseInputDraft = draft.databaseInput;
+        },
       ),
     );
     if (input == null) {
       return false;
     }
 
+    _notionApiTokenDraft = input.apiToken;
+    _notionDatabaseInputDraft = input.databaseInput;
     return _syncNotionTasks(input: input, enableSync: true);
   }
 
@@ -264,6 +273,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _notionDatabaseId = '';
       _notionDatabaseTitle = '';
+      _notionApiTokenDraft = '';
+      _notionDatabaseInputDraft = '';
     });
     _showMessage('Notion 연동을 해제하고 가져온 퀘스트를 정리했어요.');
   }
@@ -313,6 +324,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isNotionSyncEnabled = true;
         _notionDatabaseId = result.databaseId;
         _notionDatabaseTitle = result.databaseTitle;
+        _notionApiTokenDraft = apiToken;
+        _notionDatabaseInputDraft = result.databaseId;
       });
       _showMessage(
         enableSync
@@ -575,10 +588,12 @@ class _NotionConnectDialog extends StatefulWidget {
   const _NotionConnectDialog({
     required this.initialApiToken,
     required this.initialDatabaseInput,
+    required this.onDraftChanged,
   });
 
   final String initialApiToken;
   final String initialDatabaseInput;
+  final ValueChanged<_NotionConnectionInput> onDraftChanged;
 
   @override
   State<_NotionConnectDialog> createState() => _NotionConnectDialogState();
@@ -594,10 +609,28 @@ class _NotionConnectDialogState extends State<_NotionConnectDialog> {
   bool _obscureToken = true;
 
   @override
+  void initState() {
+    super.initState();
+    _apiTokenController.addListener(_notifyDraftChanged);
+    _databaseController.addListener(_notifyDraftChanged);
+  }
+
+  @override
   void dispose() {
+    _apiTokenController.removeListener(_notifyDraftChanged);
+    _databaseController.removeListener(_notifyDraftChanged);
     _apiTokenController.dispose();
     _databaseController.dispose();
     super.dispose();
+  }
+
+  void _notifyDraftChanged() {
+    widget.onDraftChanged(
+      _NotionConnectionInput(
+        apiToken: _apiTokenController.text,
+        databaseInput: _databaseController.text,
+      ),
+    );
   }
 
   @override
@@ -609,14 +642,16 @@ class _NotionConnectDialogState extends State<_NotionConnectDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Notion integration secret과 데이터베이스 URL 또는 ID를 입력하세요.'),
+            const Text(
+              'Notion integration secret과 data source ID(권장) 또는 원본 데이터베이스 URL/ID를 입력하세요.',
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _apiTokenController,
               obscureText: _obscureToken,
               decoration: InputDecoration(
                 labelText: 'Integration Secret',
-                hintText: 'secret_xxx',
+                hintText: 'ntn_xxx',
                 suffixIcon: IconButton(
                   onPressed: () {
                     setState(() => _obscureToken = !_obscureToken);
@@ -633,8 +668,8 @@ class _NotionConnectDialogState extends State<_NotionConnectDialog> {
             TextField(
               controller: _databaseController,
               decoration: const InputDecoration(
-                labelText: 'Database URL 또는 ID',
-                hintText: 'https://www.notion.so/... 또는 UUID',
+                labelText: 'Data source ID 또는 Database URL/ID',
+                hintText: 'data source UUID 또는 https://www.notion.so/...',
               ),
             ),
           ],

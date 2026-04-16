@@ -31,41 +31,129 @@ class NotionSyncException implements Exception {
   String toString() => message;
 }
 
+class _NotionApiException extends NotionSyncException {
+  const _NotionApiException({
+    required String message,
+    required this.statusCode,
+    required this.code,
+  }) : super(message);
+
+  final int statusCode;
+  final String? code;
+}
+
+class _ResolvedNotionSource {
+  const _ResolvedNotionSource({
+    required this.sourceId,
+    required this.sourceTitle,
+    required this.pages,
+  });
+
+  final String sourceId;
+  final String sourceTitle;
+  final List<Map<String, dynamic>> pages;
+}
+
 class NotionSyncService {
   const NotionSyncService();
 
   static const _apiHost = 'api.notion.com';
-  static const _apiVersion = '2022-06-28';
+  static const _apiVersion = '2026-03-11';
 
   Future<NotionSyncResult> syncDatabase(NotionSyncConfig config) async {
     final trimmedToken = config.apiToken.trim();
-    final databaseId = normalizeDatabaseId(config.databaseInput);
+    final inputId = normalizeDatabaseId(config.databaseInput);
     if (trimmedToken.isEmpty) {
       throw const NotionSyncException('Notion integration secret을 입력해 주세요.');
     }
-    if (databaseId.isEmpty) {
-      throw const NotionSyncException('올바른 Notion 데이터베이스 URL 또는 ID를 입력해 주세요.');
+    if (inputId.isEmpty) {
+      throw const NotionSyncException(
+        '올바른 Notion data source ID 또는 원본 데이터베이스 URL/ID를 입력해 주세요.',
+      );
     }
-
-    final database = await _requestJson(
-      method: 'GET',
-      path: '/v1/databases/$databaseId',
+    final resolved = await _resolveSource(
       apiToken: trimmedToken,
-    );
-    final pages = await _queryDatabase(
-      apiToken: trimmedToken,
-      databaseId: databaseId,
+      inputId: inputId,
     );
 
     return NotionSyncResult(
-      databaseId: databaseId,
-      databaseTitle: _databaseTitleFromResponse(database),
-      quests: pages
+      databaseId: resolved.sourceId,
+      databaseTitle: resolved.sourceTitle,
+      quests: resolved.pages
           .where((page) => !_isCompleted(page))
           .map(_questFromPage)
           .whereType<QuestItem>()
           .toList(),
     );
+  }
+
+  Future<_ResolvedNotionSource> _resolveSource({
+    required String apiToken,
+    required String inputId,
+  }) async {
+    try {
+      final dataSource = await _requestJson(
+        method: 'GET',
+        path: '/v1/data_sources/$inputId',
+        apiToken: apiToken,
+      );
+      final pages = await _queryDataSource(
+        apiToken: apiToken,
+        dataSourceId: inputId,
+      );
+      return _ResolvedNotionSource(
+        sourceId: inputId,
+        sourceTitle: _titleFromResponse(
+          dataSource,
+          fallback: 'Notion Data Source',
+        ),
+        pages: pages,
+      );
+    } on _NotionApiException catch (error) {
+      if (!_shouldFallbackToDatabase(error)) {
+        rethrow;
+      }
+    }
+
+    final database = await _requestJson(
+      method: 'GET',
+      path: '/v1/databases/$inputId',
+      apiToken: apiToken,
+    );
+    final dataSourceIds = _extractDataSourceIds(database);
+    if (dataSourceIds.isEmpty) {
+      throw const NotionSyncException(
+        '이 Notion 데이터베이스에서 읽을 수 있는 data source를 찾지 못했습니다. 원본 데이터베이스를 integration에 직접 공유했는지 확인해 주세요.',
+      );
+    }
+
+    final pages = <Map<String, dynamic>>[];
+    final pageIds = <String>{};
+    for (final dataSourceId in dataSourceIds) {
+      final results = await _queryDataSource(
+        apiToken: apiToken,
+        dataSourceId: dataSourceId,
+      );
+      for (final page in results) {
+        final pageId = page['id'] as String?;
+        if (pageId == null || !pageIds.add(pageId)) {
+          continue;
+        }
+        pages.add(page);
+      }
+    }
+
+    return _ResolvedNotionSource(
+      sourceId: dataSourceIds.first,
+      sourceTitle: _titleFromResponse(database, fallback: 'Notion Database'),
+      pages: pages,
+    );
+  }
+
+  bool _shouldFallbackToDatabase(_NotionApiException error) {
+    return error.statusCode == 404 ||
+        error.code == 'object_not_found' ||
+        error.code == 'validation_error';
   }
 
   static String normalizeDatabaseId(String input) {
@@ -91,9 +179,19 @@ class NotionSyncService {
     ].join('-');
   }
 
-  Future<List<Map<String, dynamic>>> _queryDatabase({
+  List<String> _extractDataSourceIds(Map<String, dynamic> database) {
+    final dataSources = database['data_sources'] as List<dynamic>? ?? const [];
+    return dataSources
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .map((item) => item['id'] as String?)
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _queryDataSource({
     required String apiToken,
-    required String databaseId,
+    required String dataSourceId,
   }) async {
     final pages = <Map<String, dynamic>>[];
     String? startCursor;
@@ -105,7 +203,7 @@ class NotionSyncService {
       }
       final response = await _requestJson(
         method: 'POST',
-        path: '/v1/databases/$databaseId/query',
+        path: '/v1/data_sources/$dataSourceId/query',
         apiToken: apiToken,
         body: body,
       );
@@ -145,9 +243,16 @@ class NotionSyncService {
           : Map<String, dynamic>.from(jsonDecode(responseBody) as Map);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        final message =
-            decoded['message'] as String? ?? 'Notion API 호출에 실패했습니다.';
-        throw NotionSyncException(message);
+        final message = _describeError(
+          statusCode: response.statusCode,
+          code: decoded['code'] as String?,
+          message: decoded['message'] as String?,
+        );
+        throw _NotionApiException(
+          message: message,
+          statusCode: response.statusCode,
+          code: decoded['code'] as String?,
+        );
       }
 
       return decoded;
@@ -162,13 +267,37 @@ class NotionSyncService {
     }
   }
 
-  String _databaseTitleFromResponse(Map<String, dynamic> response) {
+  String _describeError({
+    required int statusCode,
+    required String? code,
+    required String? message,
+  }) {
+    if (statusCode == 401) {
+      return 'Notion integration secret이 올바르지 않습니다.';
+    }
+    if (statusCode == 403) {
+      return '이 data source 또는 데이터베이스에 접근할 권한이 없습니다. 원본 data source나 데이터베이스를 integration에 직접 공유했는지 확인해 주세요.';
+    }
+    if (statusCode == 404 || code == 'object_not_found') {
+      return 'Notion data source 또는 데이터베이스를 찾지 못했습니다. data source ID 또는 원본 데이터베이스 URL/ID가 맞는지 확인해 주세요.';
+    }
+    if (statusCode == 400 || code == 'validation_error') {
+      return '입력값 형식이 Notion data source 또는 원본 데이터베이스와 맞지 않습니다. data source ID 또는 원본 데이터베이스 URL/ID를 넣었는지 확인해 주세요.';
+    }
+
+    return message ?? 'Notion API 호출에 실패했습니다.';
+  }
+
+  String _titleFromResponse(
+    Map<String, dynamic> response, {
+    required String fallback,
+  }) {
     final titleItems = response['title'] as List<dynamic>? ?? const [];
     final title = titleItems
         .map((item) => (item as Map)['plain_text'] as String? ?? '')
         .join()
         .trim();
-    return title.isEmpty ? 'Notion Database' : title;
+    return title.isEmpty ? fallback : title;
   }
 
   bool _isCompleted(Map<String, dynamic> page) {
