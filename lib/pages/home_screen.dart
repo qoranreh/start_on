@@ -135,7 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Map<String, int> _categoryCounts(List<QuestItem> quests) {
-    final counts = <String, int>{'work': 0, 'exercise': 0, 'A&I': 0, 'todo': 0};
+    final counts = <String, int>{'work': 0, 'life': 0, 'study': 0, 'home': 0};
 
     for (final quest in quests) {
       counts.update(quest.category, (value) => value + 1, ifAbsent: () => 1);
@@ -147,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, int> _completedCategoryCounts(
     List<CompletedQuestRecord> records,
   ) {
-    final counts = <String, int>{'work': 0, 'exercise': 0, 'A&I': 0, 'todo': 0};
+    final counts = <String, int>{'work': 0, 'life': 0, 'study': 0, 'home': 0};
 
     for (final record in records) {
       counts.update(record.category, (value) => value + 1, ifAbsent: () => 1);

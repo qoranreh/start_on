@@ -42,6 +42,38 @@ class LocalDataStore {
     await prefs.setString(_storageKey, jsonEncode(data.toJson()));
   }
 
+  AppLocalData replaceNotionQuests(
+    AppLocalData currentData,
+    List<QuestItem> notionQuests,
+  ) {
+    final existingById = {
+      for (final quest in currentData.quests) quest.id: quest,
+    };
+    final mergedNotionQuests = notionQuests.map((quest) {
+      final existing = existingById[quest.id];
+      if (existing == null) {
+        return quest;
+      }
+
+      return quest.copyWith(elapsedSeconds: existing.elapsedSeconds);
+    }).toList();
+    final manualQuests = currentData.quests
+        .where((quest) => !quest.id.startsWith('notion:'))
+        .toList();
+
+    return currentData.copyWith(
+      quests: [...mergedNotionQuests, ...manualQuests],
+    );
+  }
+
+  AppLocalData removeNotionQuests(AppLocalData currentData) {
+    return currentData.copyWith(
+      quests: currentData.quests
+          .where((quest) => !quest.id.startsWith('notion:'))
+          .toList(),
+    );
+  }
+
   AppLocalData completeQuest(
     AppLocalData currentData,
     CompletedQuestRecord record,

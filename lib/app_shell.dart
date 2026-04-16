@@ -276,6 +276,7 @@ class _AdFocusShellState extends State<AdFocusShell>
       context,
     ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
     await _reloadSettingsAfterSettingsScreen();
+    await _reloadLocalDataAfterSettingsScreen();
   }
 
   Future<void> _openAutoQuestFromGallery() async {
@@ -335,15 +336,8 @@ class _AdFocusShellState extends State<AdFocusShell>
   }
 
   Future<void> _loadLocalData() async {
-    var data = await _store.load();
+    final data = await _buildLoadedLocalData();
     final activeSnapshot = await _questTimerService.currentState();
-    if (activeSnapshot != null) {
-      data = _copyWithQuestElapsed(
-        data,
-        questId: activeSnapshot.questId,
-        elapsedSeconds: activeSnapshot.elapsedSeconds,
-      );
-    }
 
     if (!mounted) {
       return;
@@ -550,6 +544,27 @@ class _AdFocusShellState extends State<AdFocusShell>
         );
       }
     }
+  }
+
+  Future<void> _reloadLocalDataAfterSettingsScreen() async {
+    final data = await _buildLoadedLocalData();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _localData = data);
+  }
+
+  Future<AppLocalData> _buildLoadedLocalData() async {
+    var data = await _store.load();
+    final activeSnapshot = await _questTimerService.currentState();
+    if (activeSnapshot != null) {
+      data = _copyWithQuestElapsed(
+        data,
+        questId: activeSnapshot.questId,
+        elapsedSeconds: activeSnapshot.elapsedSeconds,
+      );
+    }
+    return data;
   }
 
   void _triggerQuestCelebration() {
