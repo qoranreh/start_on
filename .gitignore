@@ -43,3 +43,4 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/samsung-SM-S931N-Android-16_2026-04-12_173056.logcat
