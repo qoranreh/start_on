@@ -19,6 +19,7 @@ class HomeQuestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final categoryStyle = _categoryStyleFor(quest.category);
     final elapsedLabel = _formatElapsedSeconds(quest.elapsedSeconds);
+    final dueDate = quest.dueDate;
 
     return GestureDetector(
       onTap: onTap,
@@ -83,6 +84,13 @@ class HomeQuestCard extends StatelessWidget {
                         color: Color(0xFF98A2B3),
                         backgroundColor: Color(0xFFF1F4F9),
                       ),
+                      if (dueDate != null)
+                        _HomeQuestMetaChip(
+                          icon: Icons.event_outlined,
+                          label: formatQuestDueDate(dueDate),
+                          color: categoryStyle.accentColor,
+                          backgroundColor: categoryStyle.backgroundColor,
+                        ),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,

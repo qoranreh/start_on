@@ -26,6 +26,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
 
   String _difficulty = '보통';
   String _category = 'work';
+  DateTime? _dueDate;
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
       _controller.text = initialQuest.title;
       _difficulty = initialQuest.difficulty;
       _category = normalizeQuestCategory(initialQuest.category);
+      _dueDate = normalizeQuestDueDate(initialQuest.dueDate);
       return;
     }
 
@@ -202,6 +204,46 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                 labelBuilder: questCategoryLabel,
                 onSelected: (value) => setState(() => _category = value),
               ),
+              const SizedBox(height: 18),
+              const Text(
+                'Due date',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF33415C),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: _pickDueDate,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: raisedFill,
+                        foregroundColor: categoryStyle.accentColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                      ),
+                      icon: const Icon(Icons.event_outlined),
+                      label: Text(
+                        _dueDate == null
+                            ? '마감일 선택'
+                            : formatQuestDueDate(_dueDate!),
+                      ),
+                    ),
+                  ),
+                  if (_dueDate != null) ...[
+                    const SizedBox(width: 10),
+                    TextButton(
+                      onPressed: () => setState(() => _dueDate = null),
+                      child: const Text('지우기'),
+                    ),
+                  ],
+                ],
+              ),
               const SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
@@ -245,6 +287,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                 elapsedSeconds: 0,
                 defaultDurationSeconds:
                     defaultQuestDurationSecondsForDifficulty(_difficulty),
+                dueDate: _dueDate,
               ))
           .copyWith(
             title: name,
@@ -255,8 +298,27 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
             defaultDurationSeconds: defaultQuestDurationSecondsForDifficulty(
               _difficulty,
             ),
+            dueDate: _dueDate,
           ),
     );
+  }
+
+  Future<void> _pickDueDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dueDate ?? now,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      helpText: '마감일 선택',
+      cancelText: '취소',
+      confirmText: '확인',
+    );
+    if (!mounted || picked == null) {
+      return;
+    }
+
+    setState(() => _dueDate = normalizeQuestDueDate(picked));
   }
 
   String _formatMinutesLabel(int seconds) {

@@ -72,6 +72,13 @@ class QuestTimerSummary extends StatelessWidget {
               backgroundColor: const Color(0xFFEEF5FF),
               foregroundColor: const Color(0xFF4A78B8),
             ),
+            if (quest.dueDate != null)
+              QuestTimerInfoChip(
+                icon: Icons.event_outlined,
+                label: formatQuestDueDate(quest.dueDate!),
+                backgroundColor: const Color(0xFFF1F6EA),
+                foregroundColor: const Color(0xFF5D8A38),
+              ),
           ],
         ),
       ],
