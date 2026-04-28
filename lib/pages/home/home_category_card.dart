@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart' as neu;
 
 // 카테고리 한 칸의 아이콘과 이름을 표현하는 카드입니다.
 class HomeCategoryCard extends StatelessWidget {
@@ -25,112 +28,160 @@ class HomeCategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          // Keep this category-colored shadow setup unchanged unless explicitly requested.
-          BoxShadow(
-            color: accentColor.withValues(alpha: 0.14),
-            blurRadius: 18,
-            spreadRadius: -2,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: accentColor.withValues(alpha: 0.09),
-            blurRadius: 28,
-            spreadRadius: -6,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          child: Ink(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: accentColor.withValues(alpha: 0.18)),
+    final totalCount = completedCount + pendingCount;
+    final progress = totalCount == 0 ? 0.0 : completedCount / totalCount;
+    final progressLabel = '$completedCount/$totalCount';
+
+    return SizedBox(
+      height: 104,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(2, 2, 5, 7),
+        child: neu.Neumorphic(
+          style: neu.NeumorphicStyle(
+            depth: 10,
+            intensity: 1,
+            surfaceIntensity: 0.22,
+            lightSource: neu.LightSource.topLeft,
+            color: backgroundColor,
+            shadowLightColor: Colors.white.withValues(alpha: 0.86),
+            shadowDarkColor: const Color(0xFF6E7685).withValues(alpha: 0.54),
+            boxShape: neu.NeumorphicBoxShape.roundRect(
+              BorderRadius.circular(13),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(13),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(17, 17, 15, 15),
+                child: Stack(
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: accentColor.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(14),
+                    Text(
+                      title.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF090A0D),
+                        height: 1,
                       ),
-                      child: Icon(icon, color: accentColor, size: 22),
                     ),
-                    const Spacer(),
-                    Transform.translate(
-                      offset: const Offset(4, -4),
-                      child: IconButton(
-                        onPressed: onAddTap,
-                        icon: Icon(
-                          Icons.add_rounded,
-                          color: accentColor,
-                          size: 18,
-                        ),
-                        splashRadius: 15,
-                        constraints: const BoxConstraints.tightFor(
-                          width: 26,
-                          height: 26,
-                        ),
-                        padding: EdgeInsets.zero,
-                        visualDensity: const VisualDensity(
-                          horizontal: -4,
-                          vertical: -4,
-                        ),
+                    Positioned(
+                      left: 4,
+                      bottom: 1,
+                      child: Icon(icon, color: Colors.black, size: 25),
+                    ),
+                    Positioned(
+                      right: -1,
+                      bottom: -1,
+                      child: _CategoryProgressBadge(
+                        progress: progress,
+                        label: progressLabel,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 26),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF24324A),
-                        ),
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '$completedCount/$pendingCount',
-                          textAlign: TextAlign.right,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: accentColor,
-                            height: 1.1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+}
+
+class _CategoryProgressBadge extends StatelessWidget {
+  const _CategoryProgressBadge({required this.progress, required this.label});
+
+  final double progress;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 58,
+      height: 58,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: const Size.square(58),
+            painter: _CategoryProgressPainter(progress: progress),
+          ),
+          Container(
+            width: 39,
+            height: 39,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFE8EBF1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 7,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF111318),
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryProgressPainter extends CustomPainter {
+  const _CategoryProgressPainter({required this.progress});
+
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final clampedProgress = progress.clamp(0.0, 1.0).toDouble();
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 7;
+    final rect = Rect.fromCircle(center: center, radius: radius);
+    final trackPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.72)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 5.5;
+    final progressPaint = Paint()
+      ..color = const Color(0xFF6F63FF)
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 5.5;
+    final dotPaint = Paint()..color = const Color(0xFF5B9CFF);
+
+    canvas.drawCircle(center, radius, trackPaint);
+    canvas.drawArc(
+      rect,
+      -math.pi / 2,
+      math.pi * 2 * clampedProgress,
+      false,
+      progressPaint,
+    );
+
+    final dotAngle = -math.pi / 2 + (math.pi * 2 * clampedProgress);
+    final dotCenter = Offset(
+      center.dx + math.cos(dotAngle) * radius,
+      center.dy + math.sin(dotAngle) * radius,
+    );
+    canvas.drawCircle(dotCenter, 4.5, Paint()..color = Colors.white);
+    canvas.drawCircle(dotCenter, 3.2, dotPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CategoryProgressPainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }

@@ -14,17 +14,17 @@ class HomeEmptyQuestCard extends StatelessWidget {
       child: neu.Neumorphic(
         style: neu.NeumorphicStyle(
           depth: 8,
-          intensity: 0.8,
-          surfaceIntensity: 0.28,
-          color: const Color(0xFFF7FAFF),
-          shadowLightColor: Colors.white,
-          shadowDarkColor: const Color(0xFFD6DFEC),
-          boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(24)),
+          intensity: 0.82,
+          surfaceIntensity: 0.16,
+          color: const Color(0xFFF1F3F8),
+          shadowLightColor: Colors.white.withValues(alpha: 0.9),
+          shadowDarkColor: const Color(0xFFD0D7E5),
+          boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(14)),
         ),
-        padding: EdgeInsets.all(20),
-        child: Column(
+        padding: const EdgeInsets.all(20),
+        child: const Column(
           children: [
-            Icon(Icons.inbox_outlined, size: 34, color: Color(0xFFC0C7D4)),
+            Icon(Icons.add_task_rounded, size: 34, color: Color(0xFF6F63FF)),
             SizedBox(height: 12),
             Text(
               '등록된 퀘스트가 없습니다',

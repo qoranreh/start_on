@@ -19,66 +19,73 @@ class HomeHeaderSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 56,
-          height: 56,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0xFFF8FBFF),
-            border: Border.all(color: const Color(0xFFE3EAF4), width: 0.5),
+            color: const Color(0xFFE3E9F6),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFD5DAE5).withValues(alpha: 0.7),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
           child: const Icon(
-            Icons.person_outline_rounded,
-            color: Color(0xFF9AABC1),
-            size: 26,
+            Icons.person_rounded,
+            color: Color(0xFFF6B42D),
+            size: 29,
           ),
         ),
-        const SizedBox(width: 7),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 '좋은 아침이에요 :)',
-                style: const TextStyle(
-                  fontSize: 12,
+                style: TextStyle(
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF000000),
+                  color: Color(0xFF24262C),
                 ),
               ),
-
-              const SizedBox(height: 2),
+              const SizedBox(height: 1),
               const Text(
                 '사용자 님',
                 style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1C2940),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF07080A),
+                  height: 1.05,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         AnimatedContainer(
           duration: const Duration(milliseconds: 260),
           curve: Curves.easeOutCubic,
           padding: EdgeInsets.symmetric(
-            horizontal: showCreditAmount ? 12 : 0,
-            vertical: showCreditAmount ? 9 : 0,
+            horizontal: showCreditAmount ? 8 : 0,
+            vertical: showCreditAmount ? 5 : 0,
           ),
           decoration: BoxDecoration(
             color: showCreditAmount
-                ? const Color(0xFFFFE48A)
+                ? Colors.white.withValues(alpha: 0.92)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(7),
             boxShadow: showCreditAmount
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFFFE48A).withValues(alpha: 0.24),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
+                      color: const Color(0xFFD8DEE9).withValues(alpha: 0.8),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
                     ),
                   ]
                 : const [],
@@ -87,9 +94,9 @@ class HomeHeaderSection extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Icons.monetization_on_outlined,
-                size: 16,
-                color: Color(0xFF745C00),
+                Icons.local_fire_department_rounded,
+                size: 13,
+                color: Color(0xFFFF4B4B),
               ),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
@@ -111,11 +118,11 @@ class HomeHeaderSection extends StatelessWidget {
                         key: const ValueKey('credit-text'),
                         padding: const EdgeInsets.only(left: 5),
                         child: Text(
-                          '$credits',
+                          '$credits위',
                           style: const TextStyle(
-                            color: Color(0xFF473200),
+                            color: Color(0xFF111318),
                             fontWeight: FontWeight.w800,
-                            fontSize: 16,
+                            fontSize: 11,
                           ),
                         ),
                       )
@@ -125,7 +132,9 @@ class HomeHeaderSection extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
+        HomeTopIconButton(icon: Icons.notifications_none_rounded, onTap: () {}),
+        const SizedBox(width: 12),
         HomeTopIconButton(icon: Icons.settings_outlined, onTap: onOpenSettings),
       ],
     );

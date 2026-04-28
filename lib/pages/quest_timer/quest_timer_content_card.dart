@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:start_on/widgets/common.dart';
 
 class QuestTimerContentCard extends StatelessWidget {
   const QuestTimerContentCard({

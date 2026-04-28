@@ -12,13 +12,10 @@ class HomeTopIconButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.76),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Icon(icon, color: const Color(0xFF6D788A), size: 20),
+        width: 22,
+        height: 32,
+        alignment: Alignment.center,
+        child: Icon(icon, color: const Color(0xFF111318), size: 22),
       ),
     );
   }

@@ -7,122 +7,164 @@ class HomeQuestCard extends StatelessWidget {
   const HomeQuestCard({
     super.key,
     required this.quest,
+    required this.priorityRank,
     required this.onTap,
     required this.onDelete,
   });
 
   final QuestItem quest;
+  final int priorityRank;
   final VoidCallback onTap;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final categoryStyle = _categoryStyleFor(quest.category);
+    final categoryLabel = questCategoryLabel(quest.category).toUpperCase();
     final elapsedLabel = _formatElapsedSeconds(quest.elapsedSeconds);
-    final dueDate = quest.dueDate;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: neu.Neumorphic(
-        style: neu.NeumorphicStyle(
-          depth: 8,
-          intensity: 0.8,
-          surfaceIntensity: 0.28,
-          color: const Color(0xFFF7FAFF),
-          shadowLightColor: Colors.white.withValues(alpha: 0.94),
-          shadowDarkColor: const Color(0xFFD6DFEC),
-          boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(24)),
-        ),
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-        child: Row(
-          children: [
-            // 아직 완료되지 않은 상태를 표현하는 체크 슬롯입니다.
-            neu.Neumorphic(
-              style: neu.NeumorphicStyle(
-                depth: 2,
-                intensity: 0.82,
-                surfaceIntensity: 0.18,
-                color: const Color(0xFFF7FAFF),
-                shadowLightColor: Colors.white,
-                shadowDarkColor: const Color(0xFFD8E0EB),
-                boxShape: neu.NeumorphicBoxShape.roundRect(
-                  BorderRadius.circular(10),
-                ),
-              ),
-              child: const SizedBox(width: 28, height: 28),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              // 퀘스트 제목과 난이도/카테고리 메타 정보를 표시합니다.
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    quest.title,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF33415C),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+    return neu.Neumorphic(
+      style: neu.NeumorphicStyle(
+        depth: 8,
+        intensity: 0.82,
+        surfaceIntensity: 0.16,
+        color: const Color(0xFFF1F3F8),
+        shadowLightColor: Colors.white.withValues(alpha: 0.9),
+        shadowDarkColor: const Color(0xFFD0D7E5),
+        boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(14)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(22, 17, 16, 15),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        quest.difficulty,
-                        style: const TextStyle(
-                          color: Color(0xFF98A2B3),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      _HomeQuestMetaChip(
-                        icon: Icons.schedule_rounded,
-                        label: elapsedLabel,
-                        color: Color(0xFF98A2B3),
-                        backgroundColor: Color(0xFFF1F4F9),
-                      ),
-                      if (dueDate != null)
-                        _HomeQuestMetaChip(
-                          icon: Icons.event_outlined,
-                          label: formatQuestDueDate(dueDate),
-                          color: categoryStyle.accentColor,
-                          backgroundColor: categoryStyle.backgroundColor,
-                        ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: categoryStyle.backgroundColor,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          quest.category,
-                          style: TextStyle(
-                            color: categoryStyle.accentColor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              quest.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF111318),
+                                height: 1.1,
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '추천 우선 순위 $priorityRank위',
+                            style: const TextStyle(
+                              color: Color(0xFF6F63FF),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: IconButton(
+                              onPressed: onDelete,
+                              icon: const Icon(Icons.close_rounded),
+                              color: const Color(0xFFC1C6D0),
+                              iconSize: 16,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints.tightFor(
+                                width: 24,
+                                height: 24,
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 11),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: categoryStyle.backgroundColor,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              categoryLabel,
+                              style: const TextStyle(
+                                color: Color(0xFF111318),
+                                fontWeight: FontWeight.w800,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            elapsedLabel,
+                            style: const TextStyle(
+                              color: Color(0xFF8F949E),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
+                          ),
+                          if (quest.dueDate != null)
+                            Text(
+                              formatQuestDueDate(quest.dueDate!),
+                              style: const TextStyle(
+                                color: Color(0xFF8F949E),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: onTap,
+                  child: Container(
+                    width: 31,
+                    height: 31,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFD7D1FF),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(
+                            0xFF6F63FF,
+                          ).withValues(alpha: 0.22),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Color(0xFF111318),
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            // 우측 휴지통 버튼으로 퀘스트를 바로 삭제합니다.
-            IconButton(
-              onPressed: onDelete,
-              icon: const Icon(
-                Icons.delete_outline_rounded,
-                color: Color(0xFFC0C7D4),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -138,62 +180,22 @@ String _formatElapsedSeconds(int elapsedSeconds) {
 _HomeQuestCategoryStyle _categoryStyleFor(String category) {
   final style = questCategoryStyleFor(category);
   return _HomeQuestCategoryStyle(
-    accentColor: style.accentColor,
-    backgroundColor: style.backgroundColor,
+    backgroundColor: _softPillColorFor(style.category),
   );
 }
 
-class _HomeQuestCategoryStyle {
-  const _HomeQuestCategoryStyle({
-    required this.accentColor,
-    required this.backgroundColor,
-  });
-
-  final Color accentColor;
-  final Color backgroundColor;
+Color _softPillColorFor(String category) {
+  return switch (category) {
+    'work' => const Color(0xFF63ADA8).withValues(alpha: 0.36),
+    'life' => const Color(0xFFA8BFAA).withValues(alpha: 0.46),
+    'study' => const Color(0xFFFFD954).withValues(alpha: 0.72),
+    'home' => const Color(0xFFF79685).withValues(alpha: 0.82),
+    _ => const Color(0xFFE6EAF2),
+  };
 }
 
-class _HomeQuestMetaChip extends StatelessWidget {
-  const _HomeQuestMetaChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.backgroundColor,
-  });
+class _HomeQuestCategoryStyle {
+  const _HomeQuestCategoryStyle({required this.backgroundColor});
 
-  final IconData icon;
-  final String label;
-  final Color color;
   final Color backgroundColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return neu.Neumorphic(
-      style: neu.NeumorphicStyle(
-        depth: 3,
-        intensity: 0.68,
-        surfaceIntensity: 0.18,
-        color: backgroundColor,
-        shadowLightColor: Colors.white.withValues(alpha: 0.9),
-        shadowDarkColor: const Color(0xFFD8E0EB),
-        boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(999)),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

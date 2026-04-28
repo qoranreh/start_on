@@ -24,15 +24,15 @@ class HomeCategoryGrid extends StatelessWidget {
         Row(
           children: [
             Expanded(child: _buildCategoryCard('work')),
-            const SizedBox(width: 12),
+            const SizedBox(width: 9),
             Expanded(child: _buildCategoryCard('life')),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 9),
         Row(
           children: [
             Expanded(child: _buildCategoryCard('study')),
-            const SizedBox(width: 12),
+            const SizedBox(width: 9),
             Expanded(child: _buildCategoryCard('home')),
           ],
         ),

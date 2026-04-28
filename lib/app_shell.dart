@@ -27,9 +27,9 @@ class AdFocusApp extends StatelessWidget {
       title: 'AD Focus',
       theme: ThemeData(
         useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF7FAFF),
+        scaffoldBackgroundColor: const Color(0xFFF1F3F8),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF7F88),
+          seedColor: const Color(0xFF6F63FF),
           brightness: Brightness.light,
         ),
         fontFamily: 'Pretendard',
@@ -114,15 +114,9 @@ class _AdFocusShellState extends State<AdFocusShell>
     if (_isLoading) {
       return Scaffold(
         body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFFFF8EF), Color(0xFFF7FBFF), Color(0xFFFFF0F3)],
-            ),
-          ),
+          decoration: const BoxDecoration(color: Color(0xFFF1F3F8)),
           child: const Center(
-            child: CircularProgressIndicator(color: Color(0xFFFF8B93)),
+            child: CircularProgressIndicator(color: Color(0xFF6F63FF)),
           ),
         ),
       );
@@ -149,17 +143,7 @@ class _AdFocusShellState extends State<AdFocusShell>
       body: Stack(
         children: [
           Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFFFF8EF),
-                  Color(0xFFF7FBFF),
-                  Color(0xFFFFF0F3),
-                ],
-              ),
-            ),
+            decoration: const BoxDecoration(color: Color(0xFFF1F3F8)),
             child: SafeArea(child: screens[_currentIndex]),
           ),
           if (_showQuestCelebration)
@@ -181,21 +165,23 @@ class _AdFocusShellState extends State<AdFocusShell>
         scale: _fabPopScale,
         child: Container(
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFFF8B93).withValues(alpha: 0.28),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
+                color: const Color(0xFF776DFF).withValues(alpha: 0.26),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
           child: FloatingActionButton(
             onPressed: _openAddQuest,
-            backgroundColor: const Color(0xFFFF8B93),
-            foregroundColor: Colors.white,
+            backgroundColor: const Color(0xFFD0CBFF),
+            foregroundColor: const Color(0xFF6358FF),
             elevation: 0,
-            shape: const CircleBorder(),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+            ),
             child: const Icon(Icons.add_rounded, size: 28),
           ),
         ),

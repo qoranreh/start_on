@@ -74,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // 상단 헤더, 카테고리, 퀘스트 목록, 완료 기록을 세로로 배치합니다.
     return ListView(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(22, 12, 22, 120),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 118),
       children: [
         HomeHeaderSection(
           todayLabel: todayLabel,
@@ -82,19 +82,19 @@ class _HomeScreenState extends State<HomeScreen> {
           showCreditAmount: _showCreditAmount,
           onOpenSettings: widget.onOpenSettings,
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 24),
         HomeCategoryGrid(
           completedCategoryCounts: completedCategoryCounts,
           pendingCategoryCounts: pendingCategoryCounts,
           onCategoryTap: _openCategoryQuestDialog,
           onAddCategoryQuest: widget.onAddQuestForCategory,
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 26),
         HomeQuestSectionHeader(
           onOpenAutoAdd: widget.onOpenAutoQuestFromGallery,
           questCount: widget.data.quests.length,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         HomeQuestList(
           quests: widget.data.quests,
           onAddQuest: widget.onAddQuest,

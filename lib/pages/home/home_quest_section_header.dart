@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart' as neu;
 import 'package:shared_preferences/shared_preferences.dart';
 
 // 오늘 진행할 퀘스트 목록 제목입니다.
@@ -137,11 +136,11 @@ class _HomeQuestSectionHeaderState extends State<HomeQuestSectionHeader>
       children: [
         const Expanded(
           child: Text(
-            'Today\'s Quest',
+            '오늘의 퀘스트',
             style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF1C2940),
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF050608),
             ),
           ),
         ),
@@ -162,28 +161,27 @@ class _HomeQuestSectionHeaderState extends State<HomeQuestSectionHeader>
           },
           child: GestureDetector(
             onTap: widget.onOpenAutoAdd,
-            child: neu.Neumorphic(
-              style: neu.NeumorphicStyle(
-                depth: 7,
-                intensity: 0.9,
-                surfaceIntensity: 0.18,
-                color: Colors.white.withValues(alpha: 0.9),
-                shadowLightColor: Colors.white.withValues(alpha: 0.98),
-                shadowDarkColor: const Color(
-                  0xFFFF8B93,
-                ).withValues(alpha: 0.24),
-                boxShape: neu.NeumorphicBoxShape.roundRect(
-                  BorderRadius.circular(14),
-                ),
-              ),
-              child: const SizedBox(
-                width: 38,
-                height: 38,
-                child: Icon(
-                  Icons.auto_fix_high_rounded,
-                  color: Color(0xFFFF8B93),
-                  size: 20,
-                ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'view all',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF8A8E98),
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.auto_fix_high_rounded,
+                    color: Color(0xFF8A8E98),
+                    size: 15,
+                  ),
+                ],
               ),
             ),
           ),

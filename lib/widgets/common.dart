@@ -15,9 +15,9 @@ class AppBottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     const items = [
       (Icons.home_outlined, '홈'),
-      (Icons.sports_martial_arts_rounded, '던전'),
+      (Icons.monitor_heart_outlined, '던전'),
       (Icons.storefront_outlined, '상점'),
-      (Icons.receipt_long_outlined, '기록'),
+      (Icons.bar_chart_rounded, '기록'),
     ];
 
     return SafeArea(
@@ -26,20 +26,20 @@ class AppBottomNavBar extends StatelessWidget {
       right: false,
       minimum: EdgeInsets.zero,
       child: BottomAppBar(
-        color: const Color(0xFFF7FBFF).withValues(alpha: 0.97),
-        elevation: 14,
+        color: const Color(0xFFFAFBFE).withValues(alpha: 0.98),
+        elevation: 4,
         surfaceTintColor: Colors.transparent,
-        shadowColor: const Color(0xFFB5C4DC).withValues(alpha: 0.24),
+        shadowColor: const Color(0xFFCAD0DC).withValues(alpha: 0.34),
         shape: const AutomaticNotchedShape(
           RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(28)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
           ),
           CircleBorder(),
         ),
-        notchMargin: 10,
+        notchMargin: 8,
         clipBehavior: Clip.antiAlias,
         child: SizedBox(
-          height: 68,
+          height: 62,
           child: Row(
             children: [
               Expanded(
@@ -56,7 +56,7 @@ class AppBottomNavBar extends StatelessWidget {
                   onTap: () => onTap(1),
                 ),
               ),
-              const SizedBox(width: 72),
+              const SizedBox(width: 76),
               Expanded(
                 child: _NavItem(
                   item: items[2],
@@ -95,31 +95,14 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              item.$1,
-              size: 22,
-              color: selected
-                  ? const Color(0xFFFF8B93)
-                  : const Color(0xFFA0A9B8),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              item.$2,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: selected
-                    ? const Color(0xFFFF8B93)
-                    : const Color(0xFFA0A9B8),
-              ),
-            ),
-          ],
+      child: Tooltip(
+        message: item.$2,
+        child: Center(
+          child: Icon(
+            item.$1,
+            size: 24,
+            color: selected ? const Color(0xFF6F63FF) : const Color(0xFF8F949E),
+          ),
         ),
       ),
     );
@@ -206,7 +189,7 @@ class SectionHeading extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFFFF8B93), size: 20),
+        Icon(icon, color: const Color(0xFF6F63FF), size: 20),
         const SizedBox(width: 8),
         Text(
           title,

@@ -29,10 +29,11 @@ class HomeQuestList extends StatelessWidget {
         for (var index = 0; index < quests.length; index++) ...[
           HomeQuestCard(
             quest: quests[index],
+            priorityRank: index + 1,
             onTap: () => onQuestTap(quests[index]),
             onDelete: () => onDeleteQuest(quests[index]),
           ),
-          if (index != quests.length - 1) const SizedBox(height: 14),
+          if (index != quests.length - 1) const SizedBox(height: 12),
         ],
       ],
     );
