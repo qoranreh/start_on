@@ -6,9 +6,9 @@ import 'package:start_on/pages/auto_quest_from_gallery_screen.dart';
 import 'package:start_on/pages/dungeon_screen.dart';
 import 'package:start_on/pages/home_screen.dart';
 import 'package:start_on/pages/quest_timer_screen.dart';
+import 'package:start_on/pages/ranking_screen.dart';
 import 'package:start_on/pages/record_screen.dart';
 import 'package:start_on/pages/settings_screen.dart';
-import 'package:start_on/pages/shop_screen.dart';
 import 'package:start_on/services/quest_timer_background_service.dart';
 import 'package:start_on/storage/app_settings_store.dart';
 import 'package:start_on/storage/local_data_store.dart';
@@ -35,6 +35,24 @@ class AdFocusApp extends StatelessWidget {
         fontFamily: 'Pretendard',
       ),
       home: const AdFocusShell(),
+    );
+  }
+}
+
+class _BottomNavCenterFabLocation extends FloatingActionButtonLocation {
+  const _BottomNavCenterFabLocation();
+
+  @override
+  Offset getOffset(ScaffoldPrelayoutGeometry scaffoldGeometry) {
+    final fabSize = scaffoldGeometry.floatingActionButtonSize;
+    final bottomBarHeight =
+        scaffoldGeometry.scaffoldSize.height - scaffoldGeometry.contentBottom;
+
+    return Offset(
+      (scaffoldGeometry.scaffoldSize.width - fabSize.width) / 2,
+      scaffoldGeometry.contentBottom +
+          (bottomBarHeight - fabSize.height) / 2 -
+          18,
     );
   }
 }
@@ -134,7 +152,7 @@ class _AdFocusShellState extends State<AdFocusShell>
         onTabChange: _changeTab,
       ),
       DungeonScreen(data: _localData, onClearDungeon: _completeDungeon),
-      ShopScreen(data: _localData),
+      RankingScreen(data: _localData),
       RecordScreen(data: _localData),
     ];
 
@@ -160,7 +178,7 @@ class _AdFocusShellState extends State<AdFocusShell>
             ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: const _BottomNavCenterFabLocation(),
       floatingActionButton: ScaleTransition(
         scale: _fabPopScale,
         child: Container(
@@ -174,15 +192,19 @@ class _AdFocusShellState extends State<AdFocusShell>
               ),
             ],
           ),
-          child: FloatingActionButton(
-            onPressed: _openAddQuest,
-            backgroundColor: const Color(0xFFD0CBFF),
-            foregroundColor: const Color(0xFF6358FF),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
+          child: SizedBox(
+            width: 56,
+            height: 42,
+            child: FloatingActionButton(
+              onPressed: _openAddQuest,
+              backgroundColor: const Color(0xFFD0CBFF),
+              foregroundColor: const Color(0xFF6358FF),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(Icons.add_rounded, size: 23),
             ),
-            child: const Icon(Icons.add_rounded, size: 28),
           ),
         ),
       ),
@@ -226,6 +248,7 @@ class _AdFocusShellState extends State<AdFocusShell>
       MaterialPageRoute<Object?>(
         builder: (_) => QuestTimerScreen(
           quest: quest,
+          userLevel: _localData.level,
           notificationsEnabled: _notificationsEnabled,
           onDelete: () => _deleteQuest(quest),
         ),

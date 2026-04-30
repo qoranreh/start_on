@@ -8,8 +8,12 @@ class RecordEmptyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return const NeumorphicRoundedCard(
       padding: EdgeInsets.all(20),
-      color: Color(0xFFF8FBFF),
-      shadowDarkColor: Color(0xFFD5DDEA),
+      color: Color(0xFFF1F3F8),
+      depth: 6,
+      intensity: 0.9,
+      surfaceIntensity: 0.32,
+      shadowLightColor: Colors.white,
+      shadowDarkColor: Color(0xFFD0D7E5),
       child: Column(
         children: [
           Icon(

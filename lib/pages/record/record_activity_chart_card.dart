@@ -20,65 +20,73 @@ class RecordActivityChartCard extends StatelessWidget {
           title: '이번 주 활동',
         ),
         const SizedBox(height: 20),
-        SizedBox(
-          height: 150,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(data.weeklyActivityBars.length, (index) {
-              return Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    right: index == data.weeklyActivityBars.length - 1
-                        ? 0
-                        : 10,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.bottomCenter,
-                          child: SizedBox.expand(
-                            child: FractionallySizedBox(
-                              alignment: Alignment.bottomCenter,
-                              heightFactor: data.weeklyActivityBars[index],
-                              child: neu.Neumorphic(
-                                style: neu.NeumorphicStyle(
-                                  depth: 5,
-                                  intensity: 0.88,
-                                  surfaceIntensity: 0.22,
-                                  color: const Color(0xFFFFC8B0),
-                                  shadowLightColor: Colors.white.withValues(
-                                    alpha: 0.96,
+        NeumorphicRoundedCard(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+          color: const Color(0xFFF1F3F8),
+          depth: 6,
+          intensity: 0.9,
+          surfaceIntensity: 0.32,
+          shadowLightColor: Colors.white,
+          shadowDarkColor: const Color(0xFFD0D7E5),
+          child: SizedBox(
+            height: 150,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(data.weeklyActivityBars.length, (index) {
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      right: index == data.weeklyActivityBars.length - 1
+                          ? 0
+                          : 10,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.bottomCenter,
+                            child: SizedBox.expand(
+                              child: FractionallySizedBox(
+                                alignment: Alignment.bottomCenter,
+                                heightFactor: data.weeklyActivityBars[index],
+                                child: neu.Neumorphic(
+                                  style: neu.NeumorphicStyle(
+                                    depth: 5,
+                                    intensity: 0.88,
+                                    surfaceIntensity: 0.22,
+                                    color: const Color(0xFFFFC8B0),
+                                    shadowLightColor: Colors.white.withValues(
+                                      alpha: 0.96,
+                                    ),
+                                    shadowDarkColor: const Color(
+                                      0xFFFFA79E,
+                                    ).withValues(alpha: 0.4),
+                                    boxShape: neu.NeumorphicBoxShape.roundRect(
+                                      BorderRadius.circular(14),
+                                    ),
                                   ),
-                                  shadowDarkColor: const Color(
-                                    0xFFFFA79E,
-                                  ).withValues(alpha: 0.4),
-                                  boxShape:
-                                      neu.NeumorphicBoxShape.roundRect(
-                                        BorderRadius.circular(14),
-                                      ),
+                                  child: const SizedBox.expand(),
                                 ),
-                                child: const SizedBox.expand(),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        labels[index],
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF7E899D),
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(height: 10),
+                        Text(
+                          labels[index],
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF7E899D),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
         ),
       ],

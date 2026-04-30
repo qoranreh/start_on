@@ -16,7 +16,7 @@ class AppBottomNavBar extends StatelessWidget {
     const items = [
       (Icons.home_outlined, '홈'),
       (Icons.monitor_heart_outlined, '던전'),
-      (Icons.storefront_outlined, '상점'),
+      (Icons.emoji_events_outlined, '랭킹'),
       (Icons.bar_chart_rounded, '기록'),
     ];
 
@@ -26,52 +26,48 @@ class AppBottomNavBar extends StatelessWidget {
       right: false,
       minimum: EdgeInsets.zero,
       child: BottomAppBar(
-        color: const Color(0xFFFAFBFE).withValues(alpha: 0.98),
-        elevation: 4,
+        color: const Color(0xFFF1F3F8),
+        elevation: 0,
         surfaceTintColor: Colors.transparent,
-        shadowColor: const Color(0xFFCAD0DC).withValues(alpha: 0.34),
-        shape: const AutomaticNotchedShape(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        child: Container(
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: Color(0xFFDDE3EE))),
           ),
-          CircleBorder(),
-        ),
-        notchMargin: 8,
-        clipBehavior: Clip.antiAlias,
-        child: SizedBox(
-          height: 62,
-          child: Row(
-            children: [
-              Expanded(
-                child: _NavItem(
-                  item: items[0],
-                  selected: currentIndex == 0,
-                  onTap: () => onTap(0),
+          child: SizedBox(
+            height: 62,
+            child: Row(
+              children: [
+                Expanded(
+                  child: _NavItem(
+                    item: items[0],
+                    selected: currentIndex == 0,
+                    onTap: () => onTap(0),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _NavItem(
-                  item: items[1],
-                  selected: currentIndex == 1,
-                  onTap: () => onTap(1),
+                Expanded(
+                  child: _NavItem(
+                    item: items[1],
+                    selected: currentIndex == 1,
+                    onTap: () => onTap(1),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 76),
-              Expanded(
-                child: _NavItem(
-                  item: items[2],
-                  selected: currentIndex == 2,
-                  onTap: () => onTap(2),
+                const SizedBox(width: 76),
+                Expanded(
+                  child: _NavItem(
+                    item: items[2],
+                    selected: currentIndex == 2,
+                    onTap: () => onTap(2),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _NavItem(
-                  item: items[3],
-                  selected: currentIndex == 3,
-                  onTap: () => onTap(3),
+                Expanded(
+                  child: _NavItem(
+                    item: items[3],
+                    selected: currentIndex == 3,
+                    onTap: () => onTap(3),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

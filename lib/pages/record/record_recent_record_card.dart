@@ -17,8 +17,12 @@ class RecordRecentRecordCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return NeumorphicRoundedCard(
       padding: const EdgeInsets.all(18),
-      color: const Color(0xFFF8FBFF),
-      shadowDarkColor: const Color(0xFFD5DDEA),
+      color: const Color(0xFFF1F3F8),
+      depth: 6,
+      intensity: 0.9,
+      surfaceIntensity: 0.32,
+      shadowLightColor: Colors.white,
+      shadowDarkColor: const Color(0xFFD0D7E5),
       child: Row(
         children: [
           Expanded(

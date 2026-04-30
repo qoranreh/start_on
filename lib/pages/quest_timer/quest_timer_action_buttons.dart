@@ -7,6 +7,7 @@ class QuestTimerActionButtons extends StatelessWidget {
     required this.isCompleting,
     required this.running,
     required this.canReset,
+    required this.canComplete,
     required this.onResetTimer,
     required this.onToggleTimer,
     required this.onStopTimer,
@@ -15,6 +16,7 @@ class QuestTimerActionButtons extends StatelessWidget {
   final bool isCompleting;
   final bool running;
   final bool canReset;
+  final bool canComplete;
   final VoidCallback onResetTimer;
   final VoidCallback onToggleTimer;
   final VoidCallback onStopTimer;
@@ -26,22 +28,33 @@ class QuestTimerActionButtons extends StatelessWidget {
       children: [
         _QuestTimerCircleButton(
           icon: Icons.replay_rounded,
-          color: const Color(0xFF89C2FF),
+          backgroundColor: const Color(0xFFF1F3F8),
+          iconColor: Colors.black,
+          size: 42,
+          iconSize: 18,
           onTap: isCompleting || !canReset ? null : onResetTimer,
         ),
-        const SizedBox(width: 18),
+        const SizedBox(width: 46),
+        _QuestTimerCircleButton(
+          icon: Icons.check_rounded,
+          backgroundColor: canComplete
+              ? const Color(0xFFFF727A)
+              : const Color(0xFFBFC4CF),
+          iconColor: Colors.white,
+          size: 56,
+          iconSize: 28,
+          onTap: isCompleting || !canComplete ? null : onStopTimer,
+          loading: isCompleting,
+          disabledOpacity: 1,
+        ),
+        const SizedBox(width: 46),
         _QuestTimerCircleButton(
           icon: running ? Icons.pause_rounded : Icons.play_arrow_rounded,
-          color: const Color(0xFFFF8B93),
-          iconSize: running ? 28 : 32,
+          backgroundColor: const Color(0xFFF1F3F8),
+          iconColor: Colors.black,
+          size: 42,
+          iconSize: running ? 19 : 23,
           onTap: isCompleting ? null : onToggleTimer,
-          loading: isCompleting,
-        ),
-        const SizedBox(width: 18),
-        _QuestTimerCircleButton(
-          icon: Icons.stop_rounded,
-          color: const Color(0xFFBFC8D7),
-          onTap: isCompleting ? null : onStopTimer,
         ),
       ],
     );
@@ -51,17 +64,23 @@ class QuestTimerActionButtons extends StatelessWidget {
 class _QuestTimerCircleButton extends StatelessWidget {
   const _QuestTimerCircleButton({
     required this.icon,
-    required this.color,
+    required this.backgroundColor,
+    required this.iconColor,
     required this.onTap,
-    this.iconSize = 26,
+    required this.size,
+    required this.iconSize,
     this.loading = false,
+    this.disabledOpacity = 0.42,
   });
 
   final IconData icon;
-  final Color color;
+  final Color backgroundColor;
+  final Color iconColor;
   final VoidCallback? onTap;
+  final double size;
   final double iconSize;
   final bool loading;
+  final double disabledOpacity;
 
   @override
   Widget build(BuildContext context) {
@@ -70,23 +89,20 @@ class _QuestTimerCircleButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Opacity(
-        opacity: enabled || loading ? 1 : 0.42,
+        opacity: enabled || loading ? 1 : disabledOpacity,
         child: neu.Neumorphic(
           style: neu.NeumorphicStyle(
             depth: 7,
             intensity: 0.9,
             surfaceIntensity: 0.22,
-            color: Color.alphaBlend(
-              color.withValues(alpha: 0.14),
-              const Color(0xFFF8FBFF),
-            ),
-            shadowLightColor: Colors.white.withValues(alpha: 0.98),
-            shadowDarkColor: color.withValues(alpha: 0.28),
+            color: backgroundColor,
+            shadowLightColor: Colors.white,
+            shadowDarkColor: const Color(0xFFD0D7E5),
             boxShape: const neu.NeumorphicBoxShape.circle(),
           ),
           child: SizedBox(
-            width: 70,
-            height: 70,
+            width: size,
+            height: size,
             child: Center(
               child: loading
                   ? SizedBox(
@@ -94,10 +110,10 @@ class _QuestTimerCircleButton extends StatelessWidget {
                       height: 24,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.6,
-                        color: color,
+                        color: iconColor,
                       ),
                     )
-                  : Icon(icon, color: color, size: iconSize),
+                  : Icon(icon, color: iconColor, size: iconSize),
             ),
           ),
         ),

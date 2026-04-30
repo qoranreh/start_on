@@ -38,12 +38,12 @@ class HomeCategoryCard extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(2, 2, 5, 7),
         child: neu.Neumorphic(
           style: neu.NeumorphicStyle(
-            depth: 10,
+            depth: 6,
             intensity: 1,
-            surfaceIntensity: 0.22,
+            surfaceIntensity: 0.44,
             lightSource: neu.LightSource.topLeft,
             color: backgroundColor,
-            shadowLightColor: Colors.white.withValues(alpha: 0.86),
+            shadowLightColor: Colors.white,
             shadowDarkColor: const Color(0xFF6E7685).withValues(alpha: 0.54),
             boxShape: neu.NeumorphicBoxShape.roundRect(
               BorderRadius.circular(13),

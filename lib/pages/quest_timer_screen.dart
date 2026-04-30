@@ -12,11 +12,13 @@ class QuestTimerScreen extends StatefulWidget {
   const QuestTimerScreen({
     super.key,
     required this.quest,
+    required this.userLevel,
     required this.notificationsEnabled,
     required this.onDelete,
   });
 
   final QuestItem quest;
+  final int userLevel;
   final bool notificationsEnabled;
   final VoidCallback onDelete;
 
@@ -84,7 +86,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
         _popWithProgress();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7FAFF),
+        backgroundColor: const Color(0xFFF1F3F8),
         body: SafeArea(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(22, 16, 22, 32),
@@ -108,6 +110,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
               QuestTimerContentCard(
                 questSummary: QuestTimerSummary(
                   quest: widget.quest,
+                  userLevel: widget.userLevel,
                   earnedExp: _calculateEarnedExp(),
                   maxDurationSeconds: maxDurationSeconds,
                 ),
@@ -118,12 +121,14 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
                   timerViewRevision: _timerViewRevision,
                   running: _running,
                   onComplete: _handleTimerComplete,
+                  onToggleTimer: _toggleTimer,
                   formatDuration: _formatDuration,
                 ),
                 actionButtons: QuestTimerActionButtons(
                   isCompleting: _isCompleting,
                   running: _running,
                   canReset: _elapsedSeconds > 0,
+                  canComplete: _elapsedSeconds > 60,
                   onResetTimer: _resetTimer,
                   onToggleTimer: _toggleTimer,
                   onStopTimer: _completeQuest,
@@ -131,9 +136,13 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
                 proofSection: QuestTimerProofSection(
                   proofImagePath: _proofImage?.path,
                   isCompleting: _isCompleting,
-                  onPickCamera: () => _pickProofImage(ImageSource.camera),
                   onPickGallery: () => _pickProofImage(ImageSource.gallery),
                   onClearImage: () => setState(() => _proofImage = null),
+                ),
+                categoryTimes: QuestTimerCategoryTimes(
+                  category: widget.quest.category,
+                  elapsedSeconds: _elapsedSeconds,
+                  formatDuration: _formatDuration,
                 ),
               ),
             ],

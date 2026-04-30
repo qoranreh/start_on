@@ -27,9 +27,9 @@ class HomeQuestCard extends StatelessWidget {
       style: neu.NeumorphicStyle(
         depth: 8,
         intensity: 0.82,
-        surfaceIntensity: 0.16,
+        surfaceIntensity: 0.28,
         color: const Color(0xFFF1F3F8),
-        shadowLightColor: Colors.white.withValues(alpha: 0.9),
+        shadowLightColor: Colors.white,
         shadowDarkColor: const Color(0xFFD0D7E5),
         boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(14)),
       ),

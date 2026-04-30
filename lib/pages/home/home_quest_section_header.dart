@@ -135,12 +135,15 @@ class _HomeQuestSectionHeaderState extends State<HomeQuestSectionHeader>
     return Row(
       children: [
         const Expanded(
-          child: Text(
-            '오늘의 퀘스트',
-            style: TextStyle(
-              fontSize: 21,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF050608),
+          child: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text(
+              '오늘의 퀘스트',
+              style: TextStyle(
+                fontSize: 21,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF050608),
+              ),
             ),
           ),
         ),

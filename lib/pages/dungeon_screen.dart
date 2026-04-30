@@ -88,11 +88,13 @@ class DungeonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return NeumorphicRoundedCard(
       padding: const EdgeInsets.all(18),
-      color: const Color(0xFFFFE6A7),
+      color: const Color(0xFFF1F3F8),
       borderRadius: 22,
-      surfaceIntensity: 0.24,
-      shadowDarkColor: const Color(0xFFFFD987).withValues(alpha: 0.42),
-      shadowLightColor: Colors.white.withValues(alpha: 0.9),
+      depth: 6,
+      intensity: 0.9,
+      surfaceIntensity: 0.32,
+      shadowDarkColor: const Color(0xFFD0D7E5),
+      shadowLightColor: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -112,12 +114,10 @@ class DungeonCard extends StatelessWidget {
                 style: neu.NeumorphicStyle(
                   depth: 5,
                   intensity: 0.88,
-                  surfaceIntensity: 0.2,
-                  color: Colors.white.withValues(alpha: 0.82),
-                  shadowLightColor: Colors.white.withValues(alpha: 0.98),
-                  shadowDarkColor: const Color(
-                    0xFFE8C870,
-                  ).withValues(alpha: 0.34),
+                  surfaceIntensity: 0.3,
+                  color: const Color(0xFFF1F3F8),
+                  shadowLightColor: Colors.white,
+                  shadowDarkColor: const Color(0xFFD0D7E5),
                   boxShape: neu.NeumorphicBoxShape.roundRect(
                     BorderRadius.circular(24),
                   ),
@@ -155,18 +155,41 @@ class DungeonCard extends StatelessWidget {
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            child: FilledButton(
-              onPressed: cleared ? null : onClear,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFFF8B93),
-                disabledBackgroundColor: const Color(0xFFF3C1C6),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+            child: neu.Neumorphic(
+              style: neu.NeumorphicStyle(
+                depth: cleared ? -2 : 5,
+                intensity: 0.9,
+                surfaceIntensity: 0.32,
+                color: cleared
+                    ? const Color(0xFFCFCBEA)
+                    : const Color(0xFF6F63FF),
+                shadowLightColor: Colors.white,
+                shadowDarkColor: const Color(
+                  0xFF4E46B8,
+                ).withValues(alpha: 0.38),
+                boxShape: neu.NeumorphicBoxShape.roundRect(
+                  BorderRadius.circular(16),
                 ),
               ),
-              child: Text(cleared ? '보상 수령 완료' : '클리어하고 보상 받기'),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: cleared ? null : onClear,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: Text(
+                        cleared ? '보상 수령 완료' : '클리어하고 보상 받기',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -193,8 +216,12 @@ class DungeonRewardCard extends StatelessWidget {
 
     return NeumorphicRoundedCard(
       padding: const EdgeInsets.all(20),
-      color: const Color(0xFFF8FBFF),
-      shadowDarkColor: const Color(0xFFD5DDEA),
+      color: const Color(0xFFF1F3F8),
+      depth: 6,
+      intensity: 0.9,
+      surfaceIntensity: 0.32,
+      shadowLightColor: Colors.white,
+      shadowDarkColor: const Color(0xFFD0D7E5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -210,12 +237,10 @@ class DungeonRewardCard extends StatelessWidget {
                 style: neu.NeumorphicStyle(
                   depth: 6,
                   intensity: 0.9,
-                  surfaceIntensity: 0.2,
-                  color: const Color(0xFFFFE48A),
-                  shadowLightColor: Colors.white.withValues(alpha: 0.96),
-                  shadowDarkColor: const Color(
-                    0xFFE1C468,
-                  ).withValues(alpha: 0.42),
+                  surfaceIntensity: 0.3,
+                  color: const Color(0xFFF1F3F8),
+                  shadowLightColor: Colors.white,
+                  shadowDarkColor: const Color(0xFFD0D7E5),
                   boxShape: neu.NeumorphicBoxShape.roundRect(
                     BorderRadius.circular(24),
                   ),

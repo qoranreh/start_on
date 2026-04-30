@@ -13,15 +13,9 @@ class RecordScreen extends StatelessWidget {
     final recent = data.recentActivities;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FAFF),
+      backgroundColor: const Color(0xFFF1F3F8),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFF8EF), Color(0xFFF7FBFF), Color(0xFFFFF0F3)],
-          ),
-        ),
+        decoration: const BoxDecoration(color: Color(0xFFF1F3F8)),
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.fromLTRB(22, 16, 22, 32),

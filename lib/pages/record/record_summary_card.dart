@@ -19,11 +19,13 @@ class RecordSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return NeumorphicRoundedCard(
       padding: const EdgeInsets.all(18),
-      color: bgColor,
+      color: const Color(0xFFF1F3F8),
       borderRadius: 22,
-      surfaceIntensity: 0.24,
-      shadowDarkColor: bgColor.withValues(alpha: 0.46),
-      shadowLightColor: Colors.white.withValues(alpha: 0.88),
+      depth: 6,
+      intensity: 0.9,
+      surfaceIntensity: 0.32,
+      shadowDarkColor: const Color(0xFFD0D7E5),
+      shadowLightColor: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -31,18 +33,18 @@ class RecordSummaryCard extends StatelessWidget {
             title,
             style: const TextStyle(
               fontSize: 16,
-              color: Colors.white,
+              color: Color(0xFF7E899D),
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 42,
               height: 1,
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: bgColor,
             ),
           ),
           const SizedBox(height: 10),
@@ -50,7 +52,7 @@ class RecordSummaryCard extends StatelessWidget {
             subtitle,
             style: const TextStyle(
               fontSize: 15,
-              color: Colors.white70,
+              color: Color(0xFF33415C),
               fontWeight: FontWeight.w600,
             ),
           ),
