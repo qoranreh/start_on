@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:start_on/dialogs/add_quest_dialog.dart';
 import 'package:start_on/models/app_local_data.dart';
+import 'package:start_on/pages/add_quest_screen.dart';
 import 'package:start_on/pages/auto_quest_from_gallery_screen.dart';
 import 'package:start_on/pages/dungeon_screen.dart';
 import 'package:start_on/pages/home_screen.dart';
@@ -17,26 +17,37 @@ import 'package:start_on/storage/local_data_store.dart';
 import 'package:start_on/widgets/common.dart';
 import 'package:start_on/widgets/quest_completion_celebration.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+const _systemUiOverlayStyle = SystemUiOverlayStyle(
+  systemNavigationBarColor: Color(0xFFF1F3F8),
+  systemNavigationBarIconBrightness: Brightness.dark,
+  statusBarColor: Colors.transparent,
+  statusBarIconBrightness: Brightness.dark,
+);
 
 class AdFocusApp extends StatelessWidget {
   const AdFocusApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Start On',
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF1F3F8),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6F63FF),
-          brightness: Brightness.light,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: _systemUiOverlayStyle,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Start On',
+        theme: ThemeData(
+          useMaterial3: true,
+          scaffoldBackgroundColor: const Color(0xFFF1F3F8),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF6F63FF),
+            brightness: Brightness.light,
+          ),
+          fontFamily: 'Pretendard',
         ),
-        fontFamily: 'Pretendard',
+        home: const _AuthGate(),
       ),
-      home: const _AuthGate(),
     );
   }
 }
@@ -268,17 +279,10 @@ class _AdFocusShellState extends State<AdFocusShell>
       floatingActionButtonLocation: const _BottomNavCenterFabLocation(),
       floatingActionButton: ScaleTransition(
         scale: _fabPopScale,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF776DFF).withValues(alpha: 0.26),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
+        child: NeumorphicRoundedCard(
+          padding: EdgeInsets.zero,
+          color: const Color(0xFFD0CBFF),
+          borderRadius: 18,
           child: SizedBox(
             width: 56,
             height: 42,
@@ -307,18 +311,18 @@ class _AdFocusShellState extends State<AdFocusShell>
   }
 
   Future<void> _openAddQuest() async {
-    await _showAddQuestDialog();
+    await _openAddQuestScreen();
   }
 
   Future<void> _openAddQuestForCategory(String category) async {
-    await _showAddQuestDialog(initialCategory: category);
+    await _openAddQuestScreen(initialCategory: category);
   }
 
-  Future<void> _showAddQuestDialog({String? initialCategory}) async {
-    final quest = await showDialog<QuestItem>(
-      context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.28),
-      builder: (context) => AddQuestDialog(initialCategory: initialCategory),
+  Future<void> _openAddQuestScreen({String? initialCategory}) async {
+    final quest = await Navigator.of(context).push<QuestItem>(
+      MaterialPageRoute<QuestItem>(
+        builder: (context) => AddQuestScreen(initialCategory: initialCategory),
+      ),
     );
 
     if (quest == null) {
@@ -337,7 +341,6 @@ class _AdFocusShellState extends State<AdFocusShell>
           quest: quest,
           userLevel: _localData.level,
           notificationsEnabled: _notificationsEnabled,
-          onDelete: () => _deleteQuest(quest),
         ),
       ),
     );

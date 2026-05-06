@@ -48,12 +48,7 @@ class HomeCategoryQuestDialog extends StatelessWidget {
                             style.accentColor.withValues(alpha: 0.08),
                             dialogBackgroundColor,
                           ),
-                          shadowLightColor: dialogBackgroundColor.withValues(
-                            alpha: 0.94,
-                          ),
-                          shadowDarkColor: style.accentColor.withValues(
-                            alpha: 0.24,
-                          ),
+                          shadowLightColor: Colors.white,
                           boxShape: neu.NeumorphicBoxShape.roundRect(
                             BorderRadius.circular(14),
                           ),
@@ -71,7 +66,7 @@ class HomeCategoryQuestDialog extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w800,
-                                color: style.accentColor,
+                                color: Colors.black,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -94,12 +89,7 @@ class HomeCategoryQuestDialog extends StatelessWidget {
                             intensity: 0.84,
                             surfaceIntensity: 0.18,
                             color: dialogBackgroundColor,
-                            shadowLightColor: dialogBackgroundColor.withValues(
-                              alpha: 0.94,
-                            ),
-                            shadowDarkColor: style.accentColor.withValues(
-                              alpha: 0.18,
-                            ),
+                            shadowLightColor: Colors.white,
                             boxShape: const neu.NeumorphicBoxShape.circle(),
                           ),
                           padding: const EdgeInsets.all(8),
@@ -113,25 +103,7 @@ class HomeCategoryQuestDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 18),
                   if (totalCount == 0)
-                    neu.Neumorphic(
-                      style: neu.NeumorphicStyle(
-                        depth: 7,
-                        intensity: 0.88,
-                        surfaceIntensity: 0.24,
-                        color: Color.alphaBlend(
-                          style.accentColor.withValues(alpha: 0.05),
-                          dialogBackgroundColor,
-                        ),
-                        shadowLightColor: dialogBackgroundColor.withValues(
-                          alpha: 0.94,
-                        ),
-                        shadowDarkColor: style.accentColor.withValues(
-                          alpha: 0.22,
-                        ),
-                        boxShape: neu.NeumorphicBoxShape.roundRect(
-                          BorderRadius.circular(20),
-                        ),
-                      ),
+                    Padding(
                       padding: const EdgeInsets.all(20),
                       child: SizedBox(
                         width: double.infinity,
@@ -143,11 +115,7 @@ class HomeCategoryQuestDialog extends StatelessWidget {
                                 intensity: 0.86,
                                 surfaceIntensity: 0.18,
                                 color: dialogBackgroundColor,
-                                shadowLightColor: dialogBackgroundColor
-                                    .withValues(alpha: 0.92),
-                                shadowDarkColor: style.accentColor.withValues(
-                                  alpha: 0.22,
-                                ),
+                                shadowLightColor: Colors.white,
                                 boxShape: const neu.NeumorphicBoxShape.circle(),
                               ),
                               padding: const EdgeInsets.all(12),
@@ -230,12 +198,7 @@ class HomeCategoryQuestDialog extends StatelessWidget {
                         intensity: 0.9,
                         surfaceIntensity: 0.22,
                         color: style.accentColor,
-                        shadowLightColor: dialogBackgroundColor.withValues(
-                          alpha: 0.94,
-                        ),
-                        shadowDarkColor: style.accentColor.withValues(
-                          alpha: 0.34,
-                        ),
+                        shadowLightColor: Colors.white,
                         boxShape: neu.NeumorphicBoxShape.roundRect(
                           BorderRadius.circular(18),
                         ),
@@ -292,55 +255,59 @@ class _CategoryQuestTile extends StatelessWidget {
       backgroundColor,
     );
 
-    return GestureDetector(
-      onTap: onTap,
-      child: neu.Neumorphic(
-        style: neu.NeumorphicStyle(
-          depth: 7,
-          intensity: 0.9,
-          surfaceIntensity: 0.24,
-          color: baseColor,
-          shadowLightColor: backgroundColor.withValues(alpha: 0.94),
-          shadowDarkColor: accentColor.withValues(alpha: 0.28),
-          boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(18)),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    quest.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF243248),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _CategoryDialogMetaChip(
-                        label:
-                            '$difficultyLabel:${quest.defaultDurationSeconds ~/ 60}분',
-                        accentColor: accentColor,
-                        backgroundColor: backgroundColor,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      child: GestureDetector(
+        onTap: onTap,
+        child: neu.Neumorphic(
+          style: neu.NeumorphicStyle(
+            depth: 7,
+            intensity: 0.9,
+            surfaceIntensity: 0.24,
+            color: baseColor,
+            shadowLightColor: Colors.white,
+            boxShape: neu.NeumorphicBoxShape.roundRect(
+              BorderRadius.circular(18),
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      quest.title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF243248),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _CategoryDialogMetaChip(
+                          label:
+                              '$difficultyLabel:${quest.defaultDurationSeconds ~/ 60}분',
+                          accentColor: accentColor,
+                          backgroundColor: backgroundColor,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: accentColor.withValues(alpha: 0.76),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: accentColor.withValues(alpha: 0.76),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -391,60 +358,63 @@ class _CompletedCategoryQuestTile extends StatelessWidget {
         ? '완료'
         : '${completedAt.month}/${completedAt.day} 완료';
 
-    return neu.Neumorphic(
-      style: neu.NeumorphicStyle(
-        depth: 7,
-        intensity: 0.92,
-        surfaceIntensity: 0.28,
-        color: Color.alphaBlend(
-          accentColor.withValues(alpha: 0.2),
-          backgroundColor,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      child: neu.Neumorphic(
+        style: neu.NeumorphicStyle(
+          depth: 7,
+          intensity: 0.92,
+          surfaceIntensity: 0.28,
+          color: Color.alphaBlend(
+            accentColor.withValues(alpha: 0.2),
+            backgroundColor,
+          ),
+          shadowLightColor: Colors.white,
+          boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(18)),
         ),
-        shadowLightColor: backgroundColor.withValues(alpha: 0.94),
-        shadowDarkColor: accentColor.withValues(alpha: 0.34),
-        boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(18)),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  record.title,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF243248),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    record.title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF243248),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _CategoryDialogMetaChip(
-                      label: '$difficultyLabel:${record.elapsedSeconds ~/ 60}분',
-                      accentColor: accentColor,
-                      backgroundColor: backgroundColor,
-                    ),
-                    _CategoryDialogMetaChip(
-                      label: completedLabel,
-                      accentColor: accentColor,
-                      backgroundColor: backgroundColor,
-                    ),
-                  ],
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _CategoryDialogMetaChip(
+                        label:
+                            '$difficultyLabel:${record.elapsedSeconds ~/ 60}분',
+                        accentColor: accentColor,
+                        backgroundColor: backgroundColor,
+                      ),
+                      _CategoryDialogMetaChip(
+                        label: completedLabel,
+                        accentColor: accentColor,
+                        backgroundColor: backgroundColor,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Icon(
-            Icons.check_circle_rounded,
-            color: accentColor.withValues(alpha: 0.88),
-          ),
-        ],
+            const SizedBox(width: 12),
+            Icon(
+              Icons.check_circle_rounded,
+              color: accentColor.withValues(alpha: 0.88),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -472,8 +442,7 @@ class _CategoryDialogMetaChip extends StatelessWidget {
           accentColor.withValues(alpha: 0.08),
           backgroundColor,
         ),
-        shadowLightColor: backgroundColor.withValues(alpha: 0.9),
-        shadowDarkColor: accentColor.withValues(alpha: 0.18),
+        shadowLightColor: Colors.white,
         boxShape: neu.NeumorphicBoxShape.roundRect(BorderRadius.circular(999)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -493,8 +462,8 @@ Color _categoryDialogBackgroundColor(String category) {
   return switch (normalizeQuestCategory(category)) {
     'work' => const Color(0xFFEAF5F4),
     'life' => const Color(0xFFF0F7F1),
-    'study' => const Color(0xFFFFF6D6),
-    'home' => const Color(0xFFFFEFEA),
+    'study' => const Color(0xFFFFF8E8),
+    'home' => const Color(0xFFFFF4F0),
     _ => const Color(0xFFF1F3F8),
   };
 }

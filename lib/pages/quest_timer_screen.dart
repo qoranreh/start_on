@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:circular_countdown_timer/circular_countdown_timer.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:start_on/pages/add_quest_screen.dart';
 import 'package:start_on/models/app_local_data.dart';
 import 'package:start_on/pages/quest_timer/quest_timer_sections.dart';
 import 'package:start_on/services/quest_timer_background_service.dart';
@@ -14,13 +15,11 @@ class QuestTimerScreen extends StatefulWidget {
     required this.quest,
     required this.userLevel,
     required this.notificationsEnabled,
-    required this.onDelete,
   });
 
   final QuestItem quest;
   final int userLevel;
   final bool notificationsEnabled;
-  final VoidCallback onDelete;
 
   @override
   State<QuestTimerScreen> createState() => _QuestTimerScreenState();
@@ -50,6 +49,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
 
   Timer? _localTicker;
   StreamSubscription<QuestTimerSnapshot>? _questTimerTickSubscription;
+  late QuestItem _quest;
   XFile? _proofImage;
   int _elapsedSeconds = 0;
   int _timerViewRevision = 0;
@@ -60,7 +60,8 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   @override
   void initState() {
     super.initState();
-    _elapsedSeconds = widget.quest.elapsedSeconds;
+    _quest = widget.quest;
+    _elapsedSeconds = _quest.elapsedSeconds;
     if (widget.notificationsEnabled) {
       _listenToBackgroundTimer();
     }
@@ -75,7 +76,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final maxDurationSeconds = widget.quest.defaultDurationSeconds;
+    final maxDurationSeconds = _quest.defaultDurationSeconds;
 
     return PopScope(
       canPop: false,
@@ -91,25 +92,12 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(22, 16, 22, 32),
             children: [
-              QuestTimerHeader(
-                onBack: _popWithProgress,
-                onDelete: () async {
-                  _stopLocalTicker();
-                  if (widget.notificationsEnabled) {
-                    await _questTimerService.stopTimer();
-                  }
-                  if (!context.mounted) {
-                    return;
-                  }
-                  widget.onDelete();
-                  Navigator.of(context).pop();
-                },
-              ),
+              QuestTimerHeader(onBack: _popWithProgress, onEdit: _editQuest),
               const SizedBox(height: 18),
               // 메인 카드 안에서 퀘스트 정보, 타이머, 액션, 인증 사진 흐름을 순서대로 보여준다.
               QuestTimerContentCard(
                 questSummary: QuestTimerSummary(
-                  quest: widget.quest,
+                  quest: _quest,
                   userLevel: widget.userLevel,
                   earnedExp: _calculateEarnedExp(),
                   maxDurationSeconds: maxDurationSeconds,
@@ -140,7 +128,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
                   onClearImage: () => setState(() => _proofImage = null),
                 ),
                 categoryTimes: QuestTimerCategoryTimes(
-                  category: widget.quest.category,
+                  category: _quest.category,
                   elapsedSeconds: _elapsedSeconds,
                   formatDuration: _formatDuration,
                 ),
@@ -170,15 +158,15 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   Future<void> _toggleTimerAsync() async {
     // 진행 중이면 일시정지, 끝까지 찼으면 초기화 후 재시작, 그 외에는 시작/재개.
     if (_running) {
-      if (_elapsedSeconds < widget.quest.defaultDurationSeconds) {
+      if (_elapsedSeconds < _quest.defaultDurationSeconds) {
         _countDownController.pause();
       }
       if (widget.notificationsEnabled) {
         await _questTimerService.pauseTimer(
-          questId: widget.quest.id,
-          questTitle: widget.quest.title,
+          questId: _quest.id,
+          questTitle: _quest.title,
           elapsedSeconds: _elapsedSeconds,
-          defaultDurationSeconds: widget.quest.defaultDurationSeconds,
+          defaultDurationSeconds: _quest.defaultDurationSeconds,
         );
       } else {
         _stopLocalTicker();
@@ -190,13 +178,13 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
       return;
     }
 
-    if (_elapsedSeconds >= widget.quest.defaultDurationSeconds) {
+    if (_elapsedSeconds >= _quest.defaultDurationSeconds) {
       if (widget.notificationsEnabled) {
         await _questTimerService.startOrResumeTimer(
-          questId: widget.quest.id,
-          questTitle: widget.quest.title,
+          questId: _quest.id,
+          questTitle: _quest.title,
           elapsedSeconds: _elapsedSeconds,
-          defaultDurationSeconds: widget.quest.defaultDurationSeconds,
+          defaultDurationSeconds: _quest.defaultDurationSeconds,
         );
       } else {
         _startLocalTicker();
@@ -217,10 +205,10 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
 
     if (widget.notificationsEnabled) {
       await _questTimerService.startOrResumeTimer(
-        questId: widget.quest.id,
-        questTitle: widget.quest.title,
+        questId: _quest.id,
+        questTitle: _quest.title,
         elapsedSeconds: _elapsedSeconds,
-        defaultDurationSeconds: widget.quest.defaultDurationSeconds,
+        defaultDurationSeconds: _quest.defaultDurationSeconds,
       );
     } else {
       _startLocalTicker();
@@ -232,7 +220,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   }
 
   Future<void> _resetTimerAsync() async {
-    if (_running && _elapsedSeconds < widget.quest.defaultDurationSeconds) {
+    if (_running && _elapsedSeconds < _quest.defaultDurationSeconds) {
       _countDownController.pause();
     }
 
@@ -252,6 +240,49 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
       _running = false;
       _timerViewRevision += 1;
     });
+  }
+
+  Future<void> _editQuest() async {
+    final updatedQuest = await Navigator.of(context).push<QuestItem>(
+      MaterialPageRoute<QuestItem>(
+        builder: (context) => AddQuestScreen(
+          initialQuest: _quest.copyWith(elapsedSeconds: _elapsedSeconds),
+          title: '퀘스트 수정',
+          submitLabel: '적용',
+        ),
+      ),
+    );
+
+    if (!mounted || updatedQuest == null) {
+      return;
+    }
+
+    final questWithProgress = updatedQuest.copyWith(
+      elapsedSeconds: _elapsedSeconds,
+    );
+
+    setState(() {
+      _quest = questWithProgress;
+      _timerViewRevision += 1;
+    });
+
+    if (_running && widget.notificationsEnabled) {
+      await _questTimerService.startOrResumeTimer(
+        questId: _quest.id,
+        questTitle: _quest.title,
+        elapsedSeconds: _elapsedSeconds,
+        defaultDurationSeconds: _quest.defaultDurationSeconds,
+      );
+    }
+
+    if (_running && _elapsedSeconds < _quest.defaultDurationSeconds) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        _countDownController.start();
+      });
+    }
   }
 
   Future<void> _pickProofImage(ImageSource source) async {
@@ -290,7 +321,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
     if (_proofImage != null) {
       proofImagePath = await _questImageStore.savePickedImage(
         _proofImage!,
-        questId: widget.quest.id,
+        questId: _quest.id,
         completedAt: completedAt,
       );
     }
@@ -303,10 +334,10 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
 
     Navigator.of(context).pop(
       CompletedQuestRecord(
-        questId: widget.quest.id,
-        title: widget.quest.title,
-        difficulty: widget.quest.difficulty,
-        category: widget.quest.category,
+        questId: _quest.id,
+        title: _quest.title,
+        difficulty: _quest.difficulty,
+        category: _quest.category,
         earnedExp: earnedExp,
         completedAt: completedAt.toIso8601String(),
         elapsedSeconds: _elapsedSeconds,
@@ -330,15 +361,15 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
     var didPauseTimer = false;
 
     if (_running) {
-      if (_elapsedSeconds < widget.quest.defaultDurationSeconds) {
+      if (_elapsedSeconds < _quest.defaultDurationSeconds) {
         _countDownController.pause();
       }
       if (widget.notificationsEnabled) {
         await _questTimerService.pauseTimer(
-          questId: widget.quest.id,
-          questTitle: widget.quest.title,
+          questId: _quest.id,
+          questTitle: _quest.title,
           elapsedSeconds: _elapsedSeconds,
-          defaultDurationSeconds: widget.quest.defaultDurationSeconds,
+          defaultDurationSeconds: _quest.defaultDurationSeconds,
         );
       } else {
         _stopLocalTicker();
@@ -356,7 +387,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
 
     Navigator.of(context).pop(
       QuestTimerScreenResult(
-        quest: widget.quest.copyWith(elapsedSeconds: _elapsedSeconds),
+        quest: _quest.copyWith(elapsedSeconds: _elapsedSeconds),
         didPauseTimer: didPauseTimer,
       ),
     );
@@ -389,7 +420,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
 
   void _listenToBackgroundTimer() {
     _questTimerTickSubscription = _questTimerService.timerTicks.listen((tick) {
-      if (!mounted || tick.questId != widget.quest.id) {
+      if (!mounted || tick.questId != _quest.id) {
         return;
       }
 
@@ -405,13 +436,13 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
 
   Future<void> _syncBackgroundTimerState() async {
     final snapshot = await _questTimerService.currentState();
-    if (!mounted || snapshot == null || snapshot.questId != widget.quest.id) {
+    if (!mounted || snapshot == null || snapshot.questId != _quest.id) {
       return;
     }
 
     final shouldStartCountdown =
         snapshot.isRunning &&
-        snapshot.elapsedSeconds < widget.quest.defaultDurationSeconds;
+        snapshot.elapsedSeconds < _quest.defaultDurationSeconds;
 
     setState(() {
       _elapsedSeconds = snapshot.elapsedSeconds;

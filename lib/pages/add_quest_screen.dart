@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart' as neu;
 import 'package:start_on/models/app_local_data.dart';
 
-class AddQuestDialog extends StatefulWidget {
-  const AddQuestDialog({
+class AddQuestScreen extends StatefulWidget {
+  const AddQuestScreen({
     super.key,
     this.initialCategory,
     this.initialQuest,
@@ -17,10 +17,10 @@ class AddQuestDialog extends StatefulWidget {
   final String submitLabel;
 
   @override
-  State<AddQuestDialog> createState() => _AddQuestDialogState();
+  State<AddQuestScreen> createState() => _AddQuestScreenState();
 }
 
-class _AddQuestDialogState extends State<AddQuestDialog> {
+class _AddQuestScreenState extends State<AddQuestScreen> {
   static const List<String> _difficultyOptions = ['쉬움', '보통', '어려움'];
   static const List<String> _categoryOptions = [
     'home',
@@ -31,8 +31,6 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
   static const Color _dialogColor = Color(0xFFF1F2F6);
   static const Color _labelColor = Color(0xFF8A8E98);
   static const Color _titleColor = Color(0xFF111111);
-  static const Color _buttonColor = Color(0xFF6B9AF5);
-  static const Color _selectedLevelColor = Color(0xFFFF7B7B);
 
   final TextEditingController _controller = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
@@ -70,34 +68,13 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
   Widget build(BuildContext context) {
     final viewInsets = MediaQuery.of(context).viewInsets;
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: _dialogColor,
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A9CA3AF),
-              blurRadius: 28,
-              offset: Offset(0, 14),
-            ),
-            BoxShadow(
-              color: Color(0x80FFFFFF),
-              blurRadius: 10,
-              offset: Offset(-6, -6),
-              spreadRadius: -2,
-            ),
-          ],
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.86,
-          ),
-          child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(22, 18, 22, 28 + viewInsets.bottom),
-            child: Column(
+    return Scaffold(
+      backgroundColor: _dialogColor,
+      body: SafeArea(
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(28, 24, 28, 40 + viewInsets.bottom),
+          children: [
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 IconButton(
@@ -125,20 +102,23 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                 const SizedBox(height: 14),
                 const _DialogSectionLabel('Title'),
                 const SizedBox(height: 8),
-                _InsetFieldShell(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: '',
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      isCollapsed: true,
-                    ),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: _titleColor,
+                FractionallySizedBox(
+                  widthFactor: 0.86,
+                  child: _InsetFieldShell(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: const InputDecoration(
+                        hintText: '',
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        isCollapsed: true,
+                      ),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: _titleColor,
+                      ),
                     ),
                   ),
                 ),
@@ -190,7 +170,7 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                           surfaceIntensity: 0.24,
                           color: Color(0xFFDAD3FF),
                           shadowDarkColor: Color(0x26000000),
-                          shadowLightColor: Color(0xCCFFFFFF),
+                          shadowLightColor: Color(0xFFFFFFFF),
                           boxShape: neu.NeumorphicBoxShape.circle(),
                         ),
                         padding: const EdgeInsets.all(14),
@@ -272,27 +252,37 @@ class _AddQuestDialogState extends State<AddQuestDialog> {
                 const SizedBox(height: 30),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton(
-                    onPressed: _submit,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _buttonColor,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: const StadiumBorder(),
-                    ),
-                    child: Text(
-                      widget.submitLabel,
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                  height: 58,
+                  child: GestureDetector(
+                    onTap: _submit,
+                    child: neu.Neumorphic(
+                      style: neu.NeumorphicStyle(
+                        depth: 6,
+                        intensity: 0.95,
+                        surfaceIntensity: 0.2,
+                        color: const Color(0xFF6B9AF5),
+                        shadowDarkColor: const Color(0x66000000),
+                        shadowLightColor: Colors.white,
+                        boxShape: neu.NeumorphicBoxShape.roundRect(
+                          BorderRadius.circular(29),
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          widget.submitLabel,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -373,7 +363,7 @@ class _DialogSectionLabel extends StatelessWidget {
       style: const TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w700,
-        color: _AddQuestDialogState._labelColor,
+        color: _AddQuestScreenState._labelColor,
       ),
     );
   }
@@ -394,10 +384,10 @@ class _InsetFieldShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return neu.Neumorphic(
       style: neu.NeumorphicStyle(
-        depth: -6,
-        intensity: 0.95,
-        surfaceIntensity: 0.18,
-        color: _AddQuestDialogState._dialogColor,
+        depth: -4,
+        intensity: 0.8,
+        surfaceIntensity: 0.12,
+        color: _AddQuestScreenState._dialogColor,
         shadowDarkColor: Color(0x18000000),
         shadowLightColor: Color(0xFFFFFFFF),
         boxShape: neu.NeumorphicBoxShape.roundRect(
@@ -425,47 +415,31 @@ class _LevelChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+      child: SizedBox(
         height: 48,
-        decoration: BoxDecoration(
-          color: selected
-              ? _AddQuestDialogState._selectedLevelColor
-              : _AddQuestDialogState._dialogColor,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: selected
-              ? const [
-                  BoxShadow(
-                    color: Color(0x26FF8B8B),
-                    blurRadius: 16,
-                    offset: Offset(0, 8),
-                  ),
-                  BoxShadow(
-                    color: Color(0x70FFFFFF),
-                    blurRadius: 8,
-                    offset: Offset(-4, -4),
-                  ),
-                ]
-              : const [
-                  BoxShadow(
-                    color: Color(0x14FFFFFF),
-                    blurRadius: 10,
-                    offset: Offset(-4, -4),
-                  ),
-                  BoxShadow(
-                    color: Color(0x12000000),
-                    blurRadius: 12,
-                    offset: Offset(4, 6),
-                  ),
-                ],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: selected ? Colors.white : const Color(0xFF1B1B1B),
+        child: neu.Neumorphic(
+          style: neu.NeumorphicStyle(
+            depth: selected ? -4 : 6,
+            intensity: selected ? 0.8 : 0.95,
+            surfaceIntensity: selected ? 0.12 : 0.2,
+            color: _AddQuestScreenState._dialogColor,
+            shadowDarkColor: selected
+                ? const Color(0x18000000)
+                : const Color(0x33000000),
+            shadowLightColor: Colors.white,
+            boxShape: neu.NeumorphicBoxShape.roundRect(
+              BorderRadius.circular(14),
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1B1B1B),
+              ),
+            ),
           ),
         ),
       ),
@@ -488,45 +462,40 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = selected
-        ? style.selectedBackground
-        : style.unselectedBackground;
+    final textColor = selected ? style.selectedTextColor : style.textColor;
 
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+      child: SizedBox(
         height: 42,
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: selected ? style.selectedShadow : style.unselectedShadow,
-              blurRadius: selected ? 16 : 10,
-              offset: const Offset(0, 6),
+        child: neu.Neumorphic(
+          style: neu.NeumorphicStyle(
+            depth: selected ? -3.5 : 5,
+            intensity: selected ? 0.8 : 0.95,
+            surfaceIntensity: selected ? 0.12 : 0.2,
+            color: _AddQuestScreenState._dialogColor,
+            shadowDarkColor: selected
+                ? const Color(0x18000000)
+                : const Color(0x33000000),
+            shadowLightColor: Colors.white,
+            boxShape: neu.NeumorphicBoxShape.roundRect(
+              BorderRadius.circular(12),
             ),
-            const BoxShadow(
-              color: Color(0x55FFFFFF),
-              blurRadius: 8,
-              offset: Offset(-3, -3),
-            ),
-          ],
-        ),
-        alignment: Alignment.center,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Text(
-              label,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
-                color: selected
-                    ? style.selectedForeground
-                    : style.unselectedForeground,
+          ),
+          child: Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+                    color: textColor,
+                  ),
+                ),
               ),
             ),
           ),
@@ -538,63 +507,35 @@ class _CategoryChip extends StatelessWidget {
 
 class _CategoryChipStyle {
   const _CategoryChipStyle({
-    required this.selectedBackground,
-    required this.unselectedBackground,
-    required this.selectedForeground,
-    required this.unselectedForeground,
-    required this.selectedShadow,
-    required this.unselectedShadow,
+    required this.selectedTextColor,
+    required this.textColor,
   });
 
-  final Color selectedBackground;
-  final Color unselectedBackground;
-  final Color selectedForeground;
-  final Color unselectedForeground;
-  final Color selectedShadow;
-  final Color unselectedShadow;
+  final Color selectedTextColor;
+  final Color textColor;
 }
 
 _CategoryChipStyle _categoryChipStyleFor(String category) {
   return switch (category) {
     'home' => const _CategoryChipStyle(
-      selectedBackground: Color(0xFFF5A18C),
-      unselectedBackground: Color(0xFFFFECE7),
-      selectedForeground: Colors.white,
-      unselectedForeground: Color(0xFFC7614B),
-      selectedShadow: Color(0x33F5A18C),
-      unselectedShadow: Color(0x18F5A18C),
+      selectedTextColor: Color(0xFFF79685),
+      textColor: Color(0xFFF39482),
     ),
     'study' => const _CategoryChipStyle(
-      selectedBackground: Color(0xFFF5D14F),
-      unselectedBackground: Color(0xFFFFF7D1),
-      selectedForeground: Color(0xFF111111),
-      unselectedForeground: Color(0xFF9A7700),
-      selectedShadow: Color(0x33E4BC2D),
-      unselectedShadow: Color(0x18E4BC2D),
+      selectedTextColor: Color(0xFFFFD954),
+      textColor: Color(0xFFF4CE46),
     ),
     'work' => const _CategoryChipStyle(
-      selectedBackground: Color(0xFFFF7C86),
-      unselectedBackground: Color(0xFFFFEAEC),
-      selectedForeground: Colors.white,
-      unselectedForeground: Color(0xFFC84B58),
-      selectedShadow: Color(0x33FF7C86),
-      unselectedShadow: Color(0x18FF7C86),
+      selectedTextColor: Color(0xFF68B3AD),
+      textColor: Color(0xFF63ADA8),
     ),
     'life' => const _CategoryChipStyle(
-      selectedBackground: Color(0xFFACC2AD),
-      unselectedBackground: Color(0xFFEEF6EF),
-      selectedForeground: Color(0xFF111111),
-      unselectedForeground: Color(0xFF5E7F61),
-      selectedShadow: Color(0x3395AF97),
-      unselectedShadow: Color(0x1895AF97),
+      selectedTextColor: Color(0xFFA8BFAA),
+      textColor: Color(0xFFA7BFA8),
     ),
     _ => const _CategoryChipStyle(
-      selectedBackground: Color(0xFFE2E5EB),
-      unselectedBackground: Color(0xFFF8FAFD),
-      selectedForeground: Color(0xFF111111),
-      unselectedForeground: Color(0xFF6C7480),
-      selectedShadow: Color(0x22000000),
-      unselectedShadow: Color(0x11000000),
+      selectedTextColor: Color(0xFF111111),
+      textColor: Color(0xFF6C7480),
     ),
   };
 }

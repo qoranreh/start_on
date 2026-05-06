@@ -4,11 +4,11 @@ class QuestTimerHeader extends StatelessWidget {
   const QuestTimerHeader({
     super.key,
     required this.onBack,
-    required this.onDelete,
+    required this.onEdit,
   });
 
   final VoidCallback onBack;
-  final VoidCallback onDelete;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -44,13 +44,18 @@ class QuestTimerHeader extends StatelessWidget {
         ),
         SizedBox(
           width: 70,
-          child: TextButton.icon(
-            onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline_rounded),
-            label: const Text('삭제'),
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFFF7F88),
-              padding: EdgeInsets.zero,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_rounded, size: 21),
+                color: const Color(0xFF1C2940),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
             ),
           ),
         ),
