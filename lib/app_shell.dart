@@ -6,6 +6,7 @@ import 'package:start_on/pages/auto_quest_from_gallery_screen.dart';
 import 'package:start_on/pages/dungeon_screen.dart';
 import 'package:start_on/pages/home_screen.dart';
 import 'package:start_on/pages/login_screen.dart';
+import 'package:start_on/pages/quest_timer/quest_timer_bottom_sheet.dart';
 import 'package:start_on/pages/quest_timer_screen.dart';
 import 'package:start_on/pages/ranking_screen.dart';
 import 'package:start_on/pages/record_screen.dart';
@@ -163,6 +164,7 @@ class AdFocusShell extends StatefulWidget {
 
 class _AdFocusShellState extends State<AdFocusShell>
     with SingleTickerProviderStateMixin {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final AppSettingsStore _settingsStore = const AppSettingsStore();
   final LocalDataStore _store = const LocalDataStore();
   final QuestTimerBackgroundService _questTimerService =
@@ -173,9 +175,12 @@ class _AdFocusShellState extends State<AdFocusShell>
   bool _isLoading = true;
   bool _isOpeningQuestTimer = false;
   bool _isQuestTimerRouteOpen = false;
+  bool _isQuestTimerBottomSheetOpen = false;
+  bool _didShowLaunchQuestTimerSheet = false;
   bool _notificationsEnabled = true;
   bool _showQuestCelebration = false;
   AppLocalData _localData = AppLocalData.initial();
+  PersistentBottomSheetController? _questTimerBottomSheetController;
   StreamSubscription<QuestTimerSnapshot>? _questTimerTickSubscription;
   late final AnimationController _fabPopController = AnimationController(
     vsync: this,
@@ -255,6 +260,7 @@ class _AdFocusShellState extends State<AdFocusShell>
     ];
 
     return Scaffold(
+      key: _scaffoldKey,
       extendBody: true,
       body: Stack(
         children: [
@@ -347,6 +353,14 @@ class _AdFocusShellState extends State<AdFocusShell>
     _isOpeningQuestTimer = false;
     _isQuestTimerRouteOpen = false;
 
+    if (result == null) {
+      return;
+    }
+
+    _handleQuestTimerResult(result);
+  }
+
+  void _handleQuestTimerResult(Object? result) {
     if (result == null) {
       return;
     }
@@ -462,12 +476,92 @@ class _AdFocusShellState extends State<AdFocusShell>
       unawaited(
         _openActiveQuestTimerIfNeeded(questId: activeSnapshot!.questId),
       );
+      return;
     }
+
+    _scheduleLaunchQuestTimerBottomSheet();
   }
 
   void _setLocalData(AppLocalData data) {
     setState(() => _localData = data);
     unawaited(_store.save(data));
+  }
+
+  void _scheduleLaunchQuestTimerBottomSheet() {
+    if (_didShowLaunchQuestTimerSheet || _localData.quests.isEmpty) {
+      return;
+    }
+
+    _didShowLaunchQuestTimerSheet = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _currentIndex != 0 || _localData.quests.isEmpty) {
+        return;
+      }
+
+      unawaited(_openQuestTimerBottomSheet(_localData.quests.first));
+    });
+  }
+
+  Future<void> _openQuestTimerBottomSheet(QuestItem quest) async {
+    if (!mounted ||
+        _isOpeningQuestTimer ||
+        _isQuestTimerRouteOpen ||
+        _isQuestTimerBottomSheetOpen) {
+      return;
+    }
+
+    final scaffoldState = _scaffoldKey.currentState;
+    if (scaffoldState == null) {
+      return;
+    }
+
+    _isQuestTimerBottomSheetOpen = true;
+
+    late final PersistentBottomSheetController controller;
+    controller = scaffoldState.showBottomSheet(
+      (context) => SizedBox(
+        width: double.infinity,
+        height: MediaQuery.sizeOf(context).height * 0.34,
+        child: QuestTimerBottomSheet(
+          quest: quest,
+          notificationsEnabled: _notificationsEnabled,
+          onQuestChanged: _updateQuest,
+        ),
+      ),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      enableDrag: true,
+      sheetAnimationStyle: const AnimationStyle(
+        curve: Curves.easeOutCubic,
+        duration: Duration(milliseconds: 360),
+        reverseCurve: Curves.easeInCubic,
+        reverseDuration: Duration(milliseconds: 260),
+      ),
+    );
+    _questTimerBottomSheetController = controller;
+
+    await controller.closed;
+
+    if (!mounted) {
+      return;
+    }
+
+    _isQuestTimerBottomSheetOpen = false;
+    if (identical(_questTimerBottomSheetController, controller)) {
+      _questTimerBottomSheetController = null;
+    }
+
+    if (_notificationsEnabled) {
+      final snapshot = await _questTimerService.currentState();
+      if (snapshot?.questId == quest.id && snapshot?.isRunning == true) {
+        await _questTimerService.pauseTimer(
+          questId: snapshot!.questId,
+          questTitle: snapshot.questTitle,
+          elapsedSeconds: snapshot.elapsedSeconds,
+          defaultDurationSeconds: snapshot.defaultDurationSeconds,
+        );
+      }
+    }
   }
 
   void _showStyledSnackBar(
