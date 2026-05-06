@@ -5,12 +5,14 @@ import 'package:start_on/models/app_local_data.dart';
 import 'package:start_on/pages/auto_quest_from_gallery_screen.dart';
 import 'package:start_on/pages/dungeon_screen.dart';
 import 'package:start_on/pages/home_screen.dart';
+import 'package:start_on/pages/login_screen.dart';
 import 'package:start_on/pages/quest_timer_screen.dart';
 import 'package:start_on/pages/ranking_screen.dart';
 import 'package:start_on/pages/record_screen.dart';
 import 'package:start_on/pages/settings_screen.dart';
 import 'package:start_on/services/quest_timer_background_service.dart';
 import 'package:start_on/storage/app_settings_store.dart';
+import 'package:start_on/storage/auth_session_store.dart';
 import 'package:start_on/storage/local_data_store.dart';
 import 'package:start_on/widgets/common.dart';
 import 'package:start_on/widgets/quest_completion_celebration.dart';
@@ -24,7 +26,7 @@ class AdFocusApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'AD Focus',
+      title: 'Start On',
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: const Color(0xFFF1F3F8),
@@ -34,8 +36,85 @@ class AdFocusApp extends StatelessWidget {
         ),
         fontFamily: 'Pretendard',
       ),
-      home: const AdFocusShell(),
+      home: const _AuthGate(),
     );
+  }
+}
+
+class _AuthGate extends StatefulWidget {
+  const _AuthGate();
+
+  @override
+  State<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<_AuthGate> {
+  final AuthSessionStore _authStore = const AuthSessionStore();
+
+  AuthSession? _session;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadSession());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(color: Color(0xFFF1F3F8)),
+          child: const Center(
+            child: CircularProgressIndicator(color: Color(0xFF6F63FF)),
+          ),
+        ),
+      );
+    }
+
+    final session = _session;
+    if (session == null) {
+      return LoginScreen(onSignIn: _handleSignIn);
+    }
+
+    return AdFocusShell(session: session, onSignOut: _handleSignOut);
+  }
+
+  Future<void> _loadSession() async {
+    final session = await _authStore.load();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _session = session;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _handleSignIn(
+    AuthSession session, {
+    required bool persist,
+  }) async {
+    if (persist) {
+      await _authStore.save(session);
+    } else {
+      await _authStore.clear();
+    }
+
+    if (!mounted) {
+      return;
+    }
+    setState(() => _session = session);
+  }
+
+  Future<void> _handleSignOut() async {
+    await _authStore.clear();
+    if (!mounted) {
+      return;
+    }
+    setState(() => _session = null);
   }
 }
 
@@ -58,7 +137,14 @@ class _BottomNavCenterFabLocation extends FloatingActionButtonLocation {
 }
 
 class AdFocusShell extends StatefulWidget {
-  const AdFocusShell({super.key});
+  const AdFocusShell({
+    required this.session,
+    required this.onSignOut,
+    super.key,
+  });
+
+  final AuthSession session;
+  final Future<void> Function() onSignOut;
 
   @override
   State<AdFocusShell> createState() => _AdFocusShellState();
@@ -143,6 +229,7 @@ class _AdFocusShellState extends State<AdFocusShell>
     final screens = [
       HomeScreen(
         data: _localData,
+        userName: widget.session.displayName,
         onAddQuest: _openAddQuest,
         onAddQuestForCategory: _openAddQuestForCategory,
         onQuestTap: _openQuestTimer,
@@ -281,9 +368,20 @@ class _AdFocusShellState extends State<AdFocusShell>
   }
 
   Future<void> _openSettings() async {
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const SettingsScreen()));
+    final result = await Navigator.of(context).push<SettingsScreenResult>(
+      MaterialPageRoute<SettingsScreenResult>(
+        builder: (_) => SettingsScreen(
+          userName: widget.session.displayName,
+          userEmail: widget.session.email,
+        ),
+      ),
+    );
+
+    if (result == SettingsScreenResult.signOut) {
+      await widget.onSignOut();
+      return;
+    }
+
     await _reloadSettingsAfterSettingsScreen();
     await _reloadLocalDataAfterSettingsScreen();
   }

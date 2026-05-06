@@ -488,19 +488,21 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final backgroundColor = selected
+        ? style.selectedBackground
+        : style.unselectedBackground;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         height: 42,
         decoration: BoxDecoration(
-          color: selected
-              ? style.background
-              : style.background.withValues(alpha: 0.82),
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: style.shadow,
+              color: selected ? style.selectedShadow : style.unselectedShadow,
               blurRadius: selected ? 16 : 10,
               offset: const Offset(0, 6),
             ),
@@ -521,8 +523,10 @@ class _CategoryChip extends StatelessWidget {
               maxLines: 1,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: style.foreground,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+                color: selected
+                    ? style.selectedForeground
+                    : style.unselectedForeground,
               ),
             ),
           ),
@@ -534,42 +538,63 @@ class _CategoryChip extends StatelessWidget {
 
 class _CategoryChipStyle {
   const _CategoryChipStyle({
-    required this.background,
-    required this.foreground,
-    required this.shadow,
+    required this.selectedBackground,
+    required this.unselectedBackground,
+    required this.selectedForeground,
+    required this.unselectedForeground,
+    required this.selectedShadow,
+    required this.unselectedShadow,
   });
 
-  final Color background;
-  final Color foreground;
-  final Color shadow;
+  final Color selectedBackground;
+  final Color unselectedBackground;
+  final Color selectedForeground;
+  final Color unselectedForeground;
+  final Color selectedShadow;
+  final Color unselectedShadow;
 }
 
 _CategoryChipStyle _categoryChipStyleFor(String category) {
   return switch (category) {
     'home' => const _CategoryChipStyle(
-      background: Color(0xFFF5A18C),
-      foreground: Color(0xFF111111),
-      shadow: Color(0x33F5A18C),
+      selectedBackground: Color(0xFFF5A18C),
+      unselectedBackground: Color(0xFFFFECE7),
+      selectedForeground: Colors.white,
+      unselectedForeground: Color(0xFFC7614B),
+      selectedShadow: Color(0x33F5A18C),
+      unselectedShadow: Color(0x18F5A18C),
     ),
     'study' => const _CategoryChipStyle(
-      background: Color(0xFFF5D14F),
-      foreground: Color(0xFF111111),
-      shadow: Color(0x33E4BC2D),
+      selectedBackground: Color(0xFFF5D14F),
+      unselectedBackground: Color(0xFFFFF7D1),
+      selectedForeground: Color(0xFF111111),
+      unselectedForeground: Color(0xFF9A7700),
+      selectedShadow: Color(0x33E4BC2D),
+      unselectedShadow: Color(0x18E4BC2D),
     ),
     'work' => const _CategoryChipStyle(
-      background: Color(0xFFFF7C86),
-      foreground: Colors.white,
-      shadow: Color(0x33FF7C86),
+      selectedBackground: Color(0xFFFF7C86),
+      unselectedBackground: Color(0xFFFFEAEC),
+      selectedForeground: Colors.white,
+      unselectedForeground: Color(0xFFC84B58),
+      selectedShadow: Color(0x33FF7C86),
+      unselectedShadow: Color(0x18FF7C86),
     ),
     'life' => const _CategoryChipStyle(
-      background: Color(0xFFACC2AD),
-      foreground: Color(0xFF111111),
-      shadow: Color(0x3395AF97),
+      selectedBackground: Color(0xFFACC2AD),
+      unselectedBackground: Color(0xFFEEF6EF),
+      selectedForeground: Color(0xFF111111),
+      unselectedForeground: Color(0xFF5E7F61),
+      selectedShadow: Color(0x3395AF97),
+      unselectedShadow: Color(0x1895AF97),
     ),
     _ => const _CategoryChipStyle(
-      background: Color(0xFFE2E5EB),
-      foreground: Color(0xFF111111),
-      shadow: Color(0x22000000),
+      selectedBackground: Color(0xFFE2E5EB),
+      unselectedBackground: Color(0xFFF8FAFD),
+      selectedForeground: Color(0xFF111111),
+      unselectedForeground: Color(0xFF6C7480),
+      selectedShadow: Color(0x22000000),
+      unselectedShadow: Color(0x11000000),
     ),
   };
 }

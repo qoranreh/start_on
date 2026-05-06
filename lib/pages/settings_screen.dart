@@ -5,8 +5,13 @@ import 'package:start_on/storage/app_settings_store.dart';
 import 'package:start_on/storage/local_data_store.dart';
 import 'package:start_on/widgets/common.dart';
 
+enum SettingsScreenResult { signOut }
+
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.userName, this.userEmail});
+
+  final String? userName;
+  final String? userEmail;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -66,6 +71,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 18),
+              RoundedCard(
+                padding: const EdgeInsets.all(20),
+                child: _AccountSummaryCard(
+                  userName: widget.userName ?? '사용자',
+                  userEmail: widget.userEmail ?? '',
+                  onSignOut: _requestSignOut,
+                ),
               ),
               const SizedBox(height: 18),
               RoundedCard(
@@ -387,6 +401,82 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _requestSignOut() {
+    Navigator.of(context).pop(SettingsScreenResult.signOut);
+  }
+}
+
+class _AccountSummaryCard extends StatelessWidget {
+  const _AccountSummaryCard({
+    required this.userName,
+    required this.userEmail,
+    required this.onSignOut,
+  });
+
+  final String userName;
+  final String userEmail;
+  final VoidCallback onSignOut;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE9E7FF),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Icon(
+            Icons.person_rounded,
+            color: Color(0xFF6F63FF),
+            size: 28,
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                userName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF1C2940),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                userEmail.isEmpty ? '로컬 계정' : userEmail,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF7E899D),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        TextButton.icon(
+          onPressed: onSignOut,
+          icon: const Icon(Icons.logout_rounded, size: 18),
+          label: const Text('로그아웃'),
+          style: TextButton.styleFrom(
+            foregroundColor: const Color(0xFFFF5E6B),
+            textStyle: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    );
   }
 }
 

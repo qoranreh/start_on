@@ -7,12 +7,14 @@ class HomeHeaderSection extends StatelessWidget {
   const HomeHeaderSection({
     super.key,
     required this.todayLabel,
+    required this.userName,
     required this.credits,
     required this.showCreditAmount,
     required this.onOpenSettings,
   });
 
   final String todayLabel;
+  final String userName;
   final int credits;
   final bool showCreditAmount;
   final VoidCallback onOpenSettings;
@@ -56,8 +58,8 @@ class HomeHeaderSection extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 1),
-              const Text(
-                '사용자 님',
+              Text(
+                '$userName 님',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
