@@ -32,4 +32,31 @@ void main() {
     expect(find.byIcon(Icons.home_outlined), findsOneWidget);
     expect(find.byIcon(Icons.bar_chart_rounded), findsOneWidget);
   });
+
+  testWidgets('guest start saves a local session', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'settings.notifications_enabled': false,
+    });
+
+    await tester.pumpWidget(const AdFocusApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('게스트로 시작'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('auth.is_signed_in'), isTrue);
+    expect(prefs.getString('auth.email'), 'guest@starton.local');
+    expect(prefs.getString('auth.display_name'), '게스트');
+    expect(find.text('게스트 님'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(const AdFocusApp());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('START ON'), findsNothing);
+    expect(find.text('게스트 님'), findsOneWidget);
+  });
 }

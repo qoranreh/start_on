@@ -90,7 +90,10 @@ class _AuthGateState extends State<_AuthGate> {
       return LoginScreen(onSignIn: _handleSignIn);
     }
 
-    return AdFocusShell(session: session, onSignOut: _handleSignOut);
+    return AdFocusShell(
+      session: session,
+      onChangeAccount: _handleAccountChange,
+    );
   }
 
   Future<void> _loadSession() async {
@@ -105,15 +108,8 @@ class _AuthGateState extends State<_AuthGate> {
     });
   }
 
-  Future<void> _handleSignIn(
-    AuthSession session, {
-    required bool persist,
-  }) async {
-    if (persist) {
-      await _authStore.save(session);
-    } else {
-      await _authStore.clear();
-    }
+  Future<void> _handleSignIn(AuthSession session) async {
+    await _authStore.save(session);
 
     if (!mounted) {
       return;
@@ -121,7 +117,7 @@ class _AuthGateState extends State<_AuthGate> {
     setState(() => _session = session);
   }
 
-  Future<void> _handleSignOut() async {
+  Future<void> _handleAccountChange() async {
     await _authStore.clear();
     if (!mounted) {
       return;
@@ -151,12 +147,12 @@ class _BottomNavCenterFabLocation extends FloatingActionButtonLocation {
 class AdFocusShell extends StatefulWidget {
   const AdFocusShell({
     required this.session,
-    required this.onSignOut,
+    required this.onChangeAccount,
     super.key,
   });
 
   final AuthSession session;
-  final Future<void> Function() onSignOut;
+  final Future<void> Function() onChangeAccount;
 
   @override
   State<AdFocusShell> createState() => _AdFocusShellState();
@@ -394,8 +390,8 @@ class _AdFocusShellState extends State<AdFocusShell>
       ),
     );
 
-    if (result == SettingsScreenResult.signOut) {
-      await widget.onSignOut();
+    if (result == SettingsScreenResult.changeAccount) {
+      await widget.onChangeAccount();
       return;
     }
 
@@ -516,6 +512,7 @@ class _AdFocusShellState extends State<AdFocusShell>
     }
 
     _isQuestTimerBottomSheetOpen = true;
+    QuestItem? fullTimerQuest;
 
     late final PersistentBottomSheetController controller;
     controller = scaffoldState.showBottomSheet(
@@ -526,11 +523,16 @@ class _AdFocusShellState extends State<AdFocusShell>
           quest: quest,
           notificationsEnabled: _notificationsEnabled,
           onQuestChanged: _updateQuest,
+          onOpenFullTimer: (updatedQuest) {
+            fullTimerQuest = updatedQuest;
+            controller.close();
+          },
+          onClose: () => controller.close(),
         ),
       ),
       backgroundColor: Colors.transparent,
       elevation: 0,
-      enableDrag: true,
+      enableDrag: false,
       sheetAnimationStyle: const AnimationStyle(
         curve: Curves.easeOutCubic,
         duration: Duration(milliseconds: 360),
@@ -549,6 +551,12 @@ class _AdFocusShellState extends State<AdFocusShell>
     _isQuestTimerBottomSheetOpen = false;
     if (identical(_questTimerBottomSheetController, controller)) {
       _questTimerBottomSheetController = null;
+    }
+
+    final questForFullTimer = fullTimerQuest;
+    if (questForFullTimer != null) {
+      await _openQuestTimer(questForFullTimer);
+      return;
     }
 
     if (_notificationsEnabled) {

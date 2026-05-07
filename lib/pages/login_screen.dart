@@ -4,8 +4,7 @@ import 'package:start_on/storage/auth_session_store.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({required this.onSignIn, super.key});
 
-  final Future<void> Function(AuthSession session, {required bool persist})
-  onSignIn;
+  final Future<void> Function(AuthSession session) onSignIn;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -16,7 +15,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  bool _rememberMe = true;
   bool _isPasswordVisible = false;
   bool _isSubmitting = false;
 
@@ -64,12 +62,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           formKey: _formKey,
                           emailController: _emailController,
                           passwordController: _passwordController,
-                          rememberMe: _rememberMe,
                           isPasswordVisible: _isPasswordVisible,
                           isSubmitting: _isSubmitting,
-                          onRememberChanged: (value) {
-                            setState(() => _rememberMe = value);
-                          },
                           onPasswordVisibilityToggle: () {
                             setState(
                               () => _isPasswordVisible = !_isPasswordVisible,
@@ -106,7 +100,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     await widget.onSignIn(
       AuthSession(email: email, displayName: _displayNameForEmail(email)),
-      persist: _rememberMe,
     );
 
     if (!mounted) {
@@ -121,7 +114,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     await widget.onSignIn(
       const AuthSession(email: 'guest@starton.local', displayName: '게스트'),
-      persist: false,
     );
 
     if (!mounted) {
@@ -202,10 +194,8 @@ class _LoginFormCard extends StatelessWidget {
     required this.formKey,
     required this.emailController,
     required this.passwordController,
-    required this.rememberMe,
     required this.isPasswordVisible,
     required this.isSubmitting,
-    required this.onRememberChanged,
     required this.onPasswordVisibilityToggle,
     required this.onSubmit,
   });
@@ -213,10 +203,8 @@ class _LoginFormCard extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController emailController;
   final TextEditingController passwordController;
-  final bool rememberMe;
   final bool isPasswordVisible;
   final bool isSubmitting;
-  final ValueChanged<bool> onRememberChanged;
   final VoidCallback onPasswordVisibilityToggle;
   final VoidCallback onSubmit;
 
@@ -284,11 +272,6 @@ class _LoginFormCard extends StatelessWidget {
                         : Icons.visibility_outlined,
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _RememberMeRow(
-                value: rememberMe,
-                onChanged: isSubmitting ? null : onRememberChanged,
               ),
               const SizedBox(height: 20),
               FilledButton.icon(
@@ -410,47 +393,6 @@ class _AuthTextField extends StatelessWidget {
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Color(0xFFFF8B93), width: 1.2),
-        ),
-      ),
-    );
-  }
-}
-
-class _RememberMeRow extends StatelessWidget {
-  const _RememberMeRow({required this.value, required this.onChanged});
-
-  final bool value;
-  final ValueChanged<bool>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onChanged == null ? null : () => onChanged!(!value),
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            Checkbox(
-              value: value,
-              onChanged: onChanged == null
-                  ? null
-                  : (checked) => onChanged!(checked ?? false),
-              activeColor: const Color(0xFF6F63FF),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
-            ),
-            const SizedBox(width: 2),
-            const Text(
-              '로그인 상태 유지',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF526079),
-              ),
-            ),
-          ],
         ),
       ),
     );

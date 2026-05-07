@@ -15,11 +15,15 @@ class QuestTimerBottomSheet extends StatefulWidget {
     required this.quest,
     required this.notificationsEnabled,
     required this.onQuestChanged,
+    required this.onOpenFullTimer,
+    required this.onClose,
   });
 
   final QuestItem quest;
   final bool notificationsEnabled;
   final ValueChanged<QuestItem> onQuestChanged;
+  final ValueChanged<QuestItem> onOpenFullTimer;
+  final VoidCallback onClose;
 
   @override
   State<QuestTimerBottomSheet> createState() => _QuestTimerBottomSheetState();
@@ -34,6 +38,8 @@ class _QuestTimerBottomSheetState extends State<QuestTimerBottomSheet> {
   StreamSubscription<QuestTimerSnapshot>? _questTimerTickSubscription;
   late int _elapsedSeconds;
   int _timerViewRevision = 0;
+  double _handleDragOffset = 0;
+  double _handleVisualOffset = 0;
   bool _hasStarted = false;
   bool _running = false;
 
@@ -86,15 +92,80 @@ class _QuestTimerBottomSheetState extends State<QuestTimerBottomSheet> {
             padding: const EdgeInsets.fromLTRB(28, 12, 28, 20),
             child: Column(
               children: [
-                Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFC9D0DE),
-                    borderRadius: BorderRadius.circular(999),
+                SizedBox(
+                  height: 40,
+                  child: Stack(
+                    alignment: Alignment.topCenter,
+                    children: [
+                      const Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Text(
+                          '당장 일을 시작하세요!',
+                          style: TextStyle(
+                            color: Color(0xFF8177FF),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onVerticalDragStart: (_) {
+                          _handleDragOffset = 0;
+                          setState(() => _handleVisualOffset = 0);
+                        },
+                        onVerticalDragUpdate: (details) {
+                          _handleDragOffset += details.primaryDelta ?? 0;
+                          setState(() {
+                            _handleVisualOffset = (_handleDragOffset * 0.22)
+                                .clamp(-30.0, 30.0);
+                          });
+                        },
+                        onVerticalDragEnd: (_) => _handleDragEnd(),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 36,
+                            vertical: 8,
+                          ),
+                          child: AnimatedSlide(
+                            duration: const Duration(milliseconds: 140),
+                            curve: Curves.easeOutCubic,
+                            offset: Offset(0, _handleVisualOffset / 16),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 140),
+                              curve: Curves.easeOutCubic,
+                              width: _handleVisualOffset.abs() > 2 ? 50 : 42,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFC9D0DE),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: Transform.translate(
+                          offset: const Offset(0, 5),
+                          child: IconButton(
+                            onPressed: _openFullTimer,
+                            icon: const Icon(Icons.open_in_full_rounded),
+                            color: const Color(0xFF8F949E),
+                            iconSize: 18,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 28,
+                              minHeight: 28,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Expanded(
                   child: Row(
                     children: [
@@ -103,15 +174,6 @@ class _QuestTimerBottomSheetState extends State<QuestTimerBottomSheet> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              '당장 일을 시작하세요!',
-                              style: TextStyle(
-                                color: Color(0xFF8177FF),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
                             SizedBox(
                               width: _bottomSheetControlWidth,
                               height: 68,
@@ -202,6 +264,27 @@ class _QuestTimerBottomSheetState extends State<QuestTimerBottomSheet> {
 
   void _toggleTimer() {
     unawaited(_toggleTimerAsync());
+  }
+
+  void _handleDragEnd() {
+    final dragOffset = _handleDragOffset;
+    _handleDragOffset = 0;
+    setState(() => _handleVisualOffset = 0);
+
+    if (dragOffset < -48) {
+      _openFullTimer();
+      return;
+    }
+
+    if (dragOffset > 48) {
+      widget.onClose();
+    }
+  }
+
+  void _openFullTimer() {
+    final updatedQuest = widget.quest.copyWith(elapsedSeconds: _elapsedSeconds);
+    widget.onQuestChanged(updatedQuest);
+    widget.onOpenFullTimer(updatedQuest);
   }
 
   Future<void> _toggleTimerAsync() async {
