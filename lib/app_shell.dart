@@ -11,6 +11,7 @@ import 'package:start_on/pages/quest_timer_screen.dart';
 import 'package:start_on/pages/ranking_screen.dart';
 import 'package:start_on/pages/record_screen.dart';
 import 'package:start_on/pages/settings_screen.dart';
+import 'package:start_on/repositories/auth_repository.dart';
 import 'package:start_on/services/quest_timer_background_service.dart';
 import 'package:start_on/storage/app_settings_store.dart';
 import 'package:start_on/storage/auth_session_store.dart';
@@ -29,7 +30,10 @@ const _systemUiOverlayStyle = SystemUiOverlayStyle(
 );
 
 class AdFocusApp extends StatelessWidget {
-  const AdFocusApp({super.key});
+  const AdFocusApp({super.key, AuthRepository? authRepository})
+    : _authRepository = authRepository;
+
+  final AuthRepository? _authRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -47,14 +51,16 @@ class AdFocusApp extends StatelessWidget {
           ),
           fontFamily: 'Pretendard',
         ),
-        home: const _AuthGate(),
+        home: _AuthGate(authRepository: _authRepository),
       ),
     );
   }
 }
 
 class _AuthGate extends StatefulWidget {
-  const _AuthGate();
+  const _AuthGate({this.authRepository});
+
+  final AuthRepository? authRepository;
 
   @override
   State<_AuthGate> createState() => _AuthGateState();
@@ -63,13 +69,25 @@ class _AuthGate extends StatefulWidget {
 class _AuthGateState extends State<_AuthGate> {
   final AuthSessionStore _authStore = const AuthSessionStore();
 
+  late final AuthRepository _authRepository;
+  late final bool _ownsAuthRepository;
   AuthSession? _session;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _authRepository = widget.authRepository ?? AuthRepository();
+    _ownsAuthRepository = widget.authRepository == null;
     unawaited(_loadSession());
+  }
+
+  @override
+  void dispose() {
+    if (_ownsAuthRepository) {
+      _authRepository.close();
+    }
+    super.dispose();
   }
 
   @override
@@ -87,7 +105,11 @@ class _AuthGateState extends State<_AuthGate> {
 
     final session = _session;
     if (session == null) {
-      return LoginScreen(onSignIn: _handleSignIn);
+      return LoginScreen(
+        onSignIn: _handleServerSignIn,
+        onSignUp: _handleServerSignUp,
+        onGuestStart: _handleGuestStart,
+      );
     }
 
     return AdFocusShell(
@@ -108,7 +130,35 @@ class _AuthGateState extends State<_AuthGate> {
     });
   }
 
-  Future<void> _handleSignIn(AuthSession session) async {
+  Future<void> _handleServerSignIn({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _authRepository.signIn(
+      email: email,
+      password: password,
+    );
+    await _saveSession(AuthSession.fromAuthResponse(response));
+  }
+
+  Future<void> _handleServerSignUp({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _authRepository.signUp(
+      email: email,
+      password: password,
+    );
+    await _saveSession(AuthSession.fromAuthResponse(response));
+  }
+
+  Future<void> _handleGuestStart() {
+    return _saveSession(
+      AuthSession.local(email: 'guest@starton.local', displayName: '게스트'),
+    );
+  }
+
+  Future<void> _saveSession(AuthSession session) async {
     await _authStore.save(session);
 
     if (!mounted) {

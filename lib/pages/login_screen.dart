@@ -1,10 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:start_on/storage/auth_session_store.dart';
+import 'package:start_on/repositories/auth_repository.dart';
+import 'package:start_on/services/api_client.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({required this.onSignIn, super.key});
+  const LoginScreen({
+    required this.onSignIn,
+    required this.onSignUp,
+    required this.onGuestStart,
+    super.key,
+  });
 
-  final Future<void> Function(AuthSession session) onSignIn;
+  final Future<void> Function({required String email, required String password})
+  onSignIn;
+  final Future<void> Function({required String email, required String password})
+  onSignUp;
+  final Future<void> Function() onGuestStart;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -17,6 +29,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isPasswordVisible = false;
   bool _isSubmitting = false;
+  _AuthMode _mode = _AuthMode.signIn;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -64,6 +78,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           passwordController: _passwordController,
                           isPasswordVisible: _isPasswordVisible,
                           isSubmitting: _isSubmitting,
+                          mode: _mode,
+                          errorMessage: _errorMessage,
+                          onModeChanged: _handleModeChanged,
                           onPasswordVisibilityToggle: () {
                             setState(
                               () => _isPasswordVisible = !_isPasswordVisible,
@@ -95,12 +112,27 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     FocusScope.of(context).unfocus();
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
 
     final email = _emailController.text.trim();
-    await widget.onSignIn(
-      AuthSession(email: email, displayName: _displayNameForEmail(email)),
-    );
+    final password = _passwordController.text;
+
+    try {
+      switch (_mode) {
+        case _AuthMode.signIn:
+          await widget.onSignIn(email: email, password: password);
+        case _AuthMode.signUp:
+          await widget.onSignUp(email: email, password: password);
+      }
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _errorMessage = _loginErrorMessage(error));
+    }
 
     if (!mounted) {
       return;
@@ -110,11 +142,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _startAsGuest() async {
     FocusScope.of(context).unfocus();
-    setState(() => _isSubmitting = true);
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
 
-    await widget.onSignIn(
-      const AuthSession(email: 'guest@starton.local', displayName: '게스트'),
-    );
+    try {
+      await widget.onGuestStart();
+    } on Object catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _errorMessage = _loginErrorMessage(error));
+    }
 
     if (!mounted) {
       return;
@@ -122,20 +162,46 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isSubmitting = false);
   }
 
-  String _displayNameForEmail(String email) {
-    final localPart = email.split('@').first.trim();
-    final cleaned = localPart.replaceAll(RegExp(r'[._-]+'), ' ').trim();
-    if (cleaned.isEmpty) {
-      return '사용자';
+  void _handleModeChanged(_AuthMode mode) {
+    if (_isSubmitting || mode == _mode) {
+      return;
     }
 
-    return cleaned
-        .split(RegExp(r'\s+'))
-        .where((part) => part.isNotEmpty)
-        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
-        .join(' ');
+    setState(() {
+      _mode = mode;
+      _errorMessage = null;
+    });
+  }
+
+  String _loginErrorMessage(Object error) {
+    if (error is ApiClientException) {
+      if (error.code == 'supabase_auth_failed') {
+        return _mode == _AuthMode.signUp
+            ? '이미 가입된 이메일이거나 가입 정보를 확인할 수 없어요.'
+            : '이메일 또는 비밀번호를 확인해 주세요.';
+      }
+      if (error.code == 'signup_requires_confirmation') {
+        return '가입은 접수됐지만 이메일 확인이 필요해요. 메일 확인 후 로그인해 주세요.';
+      }
+      if (error.code == 'supabase_auth_network_error') {
+        return '인증 서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.';
+      }
+      return error.message;
+    }
+
+    if (error is AuthRepositoryException) {
+      return error.message;
+    }
+
+    if (error is TimeoutException) {
+      return '서버 응답 시간이 초과됐어요. 잠시 후 다시 시도해 주세요.';
+    }
+
+    return '로그인 중 문제가 발생했어요. 잠시 후 다시 시도해 주세요.';
   }
 }
+
+enum _AuthMode { signIn, signUp }
 
 class _LoginHero extends StatelessWidget {
   const _LoginHero();
@@ -196,6 +262,9 @@ class _LoginFormCard extends StatelessWidget {
     required this.passwordController,
     required this.isPasswordVisible,
     required this.isSubmitting,
+    required this.mode,
+    required this.errorMessage,
+    required this.onModeChanged,
     required this.onPasswordVisibilityToggle,
     required this.onSubmit,
   });
@@ -205,11 +274,16 @@ class _LoginFormCard extends StatelessWidget {
   final TextEditingController passwordController;
   final bool isPasswordVisible;
   final bool isSubmitting;
+  final _AuthMode mode;
+  final String? errorMessage;
+  final ValueChanged<_AuthMode> onModeChanged;
   final VoidCallback onPasswordVisibilityToggle;
   final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
+    final isSignUp = mode == _AuthMode.signUp;
+
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.9),
@@ -229,14 +303,57 @@ class _LoginFormCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                '로그인',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF1C2940),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      isSignUp ? '회원가입' : '로그인',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1C2940),
+                      ),
+                    ),
+                  ),
+                  SegmentedButton<_AuthMode>(
+                    showSelectedIcon: false,
+                    segments: const [
+                      ButtonSegment<_AuthMode>(
+                        value: _AuthMode.signIn,
+                        label: Text('로그인'),
+                      ),
+                      ButtonSegment<_AuthMode>(
+                        value: _AuthMode.signUp,
+                        label: Text('가입'),
+                      ),
+                    ],
+                    selected: {mode},
+                    onSelectionChanged: isSubmitting
+                        ? null
+                        : (selected) => onModeChanged(selected.single),
+                    style: ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      textStyle: WidgetStateProperty.all(
+                        const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              if (isSignUp) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  '가입 후 바로 시작할 수 있어요.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF526079),
+                  ),
+                ),
+              ],
               const SizedBox(height: 18),
               _AuthTextField(
                 controller: emailController,
@@ -257,7 +374,7 @@ class _LoginFormCard extends StatelessWidget {
                 obscureText: !isPasswordVisible,
                 textInputAction: TextInputAction.done,
                 autofillHints: const [AutofillHints.password],
-                validator: _validatePassword,
+                validator: (value) => _validatePassword(value, mode),
                 onFieldSubmitted: (_) {
                   if (!isSubmitting) {
                     onSubmit();
@@ -273,6 +390,10 @@ class _LoginFormCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (errorMessage != null) ...[
+                const SizedBox(height: 14),
+                _LoginErrorBanner(message: errorMessage!),
+              ],
               const SizedBox(height: 20),
               FilledButton.icon(
                 onPressed: isSubmitting ? null : onSubmit,
@@ -288,9 +409,18 @@ class _LoginFormCard extends StatelessWidget {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.login_rounded, key: ValueKey('icon')),
+                      : Icon(
+                          isSignUp
+                              ? Icons.person_add_alt_1_rounded
+                              : Icons.login_rounded,
+                          key: ValueKey(mode),
+                        ),
                 ),
-                label: Text(isSubmitting ? '로그인 중' : '로그인'),
+                label: Text(
+                  isSubmitting
+                      ? (isSignUp ? '가입 중' : '로그인 중')
+                      : (isSignUp ? '회원가입' : '로그인'),
+                ),
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF6F63FF),
                   foregroundColor: Colors.white,
@@ -322,11 +452,53 @@ class _LoginFormCard extends StatelessWidget {
     return null;
   }
 
-  String? _validatePassword(String? value) {
-    if ((value ?? '').length < 4) {
-      return '비밀번호는 4자 이상 입력해 주세요.';
+  String? _validatePassword(String? value, _AuthMode mode) {
+    final minLength = mode == _AuthMode.signUp ? 6 : 4;
+    if ((value ?? '').length < minLength) {
+      return '비밀번호는 $minLength자 이상 입력해 주세요.';
     }
     return null;
+  }
+}
+
+class _LoginErrorBanner extends StatelessWidget {
+  const _LoginErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEEF0),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFFC9CE)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: Color(0xFFC33D4A),
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Color(0xFF80313A),
+                  fontWeight: FontWeight.w700,
+                  height: 1.35,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
