@@ -35,7 +35,7 @@ class HomeCategoryCard extends StatelessWidget {
     return SizedBox(
       height: 104,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(2, 2, 5, 7),
+        padding: const EdgeInsets.fromLTRB(1, 1, 3, 4),
         child: neu.Neumorphic(
           style: neu.NeumorphicStyle(
             depth: 6,
@@ -55,7 +55,7 @@ class HomeCategoryCard extends StatelessWidget {
               onTap: onTap,
               borderRadius: BorderRadius.circular(13),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(17, 17, 15, 15),
+                padding: const EdgeInsets.fromLTRB(15, 15, 13, 13),
                 child: Stack(
                   children: [
                     Text(

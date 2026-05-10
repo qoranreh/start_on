@@ -2,10 +2,20 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:start_on/storage/app_settings_store.dart';
+
+const String _androidQuestTimerOngoingChannelId =
+    'start_on_quest_timer_ongoing';
+const String _androidQuestTimerCompleteChannelId =
+    'start_on_quest_timer_complete';
+const int _questTimerOngoingNotificationId = 9042;
+const int _questTimerCompleteNotificationId = 9043;
+const String _questTimerNotificationIcon = 'ic_bg_service_small';
 
 const String _questTimerTickEvent = 'quest_timer_tick';
 const String _questTimerResumeAction = 'quest_timer_resume';
@@ -17,6 +27,10 @@ const String _prefsQuestTitleKey = 'quest_timer.quest_title';
 const String _prefsElapsedSecondsKey = 'quest_timer.elapsed_seconds';
 const String _prefsDefaultDurationKey = 'quest_timer.default_duration_seconds';
 const String _prefsIsRunningKey = 'quest_timer.is_running';
+
+final FlutterLocalNotificationsPlugin _questTimerNotifications =
+    FlutterLocalNotificationsPlugin();
+bool _questTimerNotificationsInitialized = false;
 
 bool get _supportsBackgroundService {
   if (kIsWeb) {
@@ -31,6 +45,91 @@ bool _isUnsupportedBackgroundServiceError(Object error) {
   return error.toString().contains(
     'FlutterBackgroundService is currently supported',
   );
+}
+
+Future<void> _ensureQuestTimerNotificationChannels() async {
+  if (kIsWeb) {
+    return;
+  }
+
+  try {
+    if (!_questTimerNotificationsInitialized) {
+      await _questTimerNotifications.initialize(
+        settings: const InitializationSettings(
+          android: AndroidInitializationSettings(_questTimerNotificationIcon),
+          iOS: DarwinInitializationSettings(),
+        ),
+      );
+      _questTimerNotificationsInitialized = true;
+    }
+
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+
+    final androidNotifications = _questTimerNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await androidNotifications?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _androidQuestTimerOngoingChannelId,
+        '퀘스트 진행 상태',
+        description: '진행 중인 퀘스트 타이머 상태 표시',
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+        showBadge: false,
+      ),
+    );
+    await androidNotifications?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _androidQuestTimerCompleteChannelId,
+        '퀘스트 완료 알림',
+        description: '퀘스트 타이머 완료 알림',
+        importance: Importance.high,
+      ),
+    );
+  } on MissingPluginException {
+    return;
+  } on PlatformException {
+    return;
+  }
+}
+
+Future<void> _showQuestTimerCompleteNotification(
+  QuestTimerSnapshot snapshot,
+) async {
+  if (kIsWeb) {
+    return;
+  }
+
+  try {
+    await _ensureQuestTimerNotificationChannels();
+    await _questTimerNotifications.show(
+      id: _questTimerCompleteNotificationId,
+      title: '퀘스트 타이머 완료',
+      body: snapshot.questTitle.isEmpty
+          ? '설정한 시간이 끝났어요.'
+          : '${snapshot.questTitle} 시간이 끝났어요.',
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _androidQuestTimerCompleteChannelId,
+          '퀘스트 완료 알림',
+          channelDescription: '퀘스트 타이머 완료 알림',
+          icon: _questTimerNotificationIcon,
+          importance: Importance.high,
+          priority: Priority.high,
+          visibility: NotificationVisibility.public,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+    );
+  } on MissingPluginException {
+    return;
+  } on PlatformException {
+    return;
+  }
 }
 
 class QuestTimerSnapshot {
@@ -134,6 +233,7 @@ class QuestTimerBackgroundService {
     }
 
     try {
+      await _ensureQuestTimerNotificationChannels();
       await _service.configure(
         androidConfiguration: AndroidConfiguration(
           onStart: questTimerBackgroundOnStart,
@@ -141,8 +241,9 @@ class QuestTimerBackgroundService {
           autoStartOnBoot: false,
           isForegroundMode: true,
           initialNotificationTitle: '퀘스트 진행 중',
-          initialNotificationContent: '백그라운드 타이머 준비 중',
-          foregroundServiceNotificationId: 9042,
+          initialNotificationContent: '타이머가 백그라운드에서 실행 중입니다.',
+          notificationChannelId: _androidQuestTimerOngoingChannelId,
+          foregroundServiceNotificationId: _questTimerOngoingNotificationId,
         ),
         iosConfiguration: IosConfiguration(
           autoStart: false,
@@ -356,21 +457,21 @@ void questTimerBackgroundOnStart(ServiceInstance service) async {
     await prefs.remove(_prefsIsRunningKey);
   }
 
-  Future<void> updateNotification(QuestTimerSnapshot snapshot) async {
+  Future<void> updateOngoingNotification(QuestTimerSnapshot snapshot) async {
     if (service is! AndroidServiceInstance) {
       return;
     }
 
     await service.setForegroundNotificationInfo(
       title: '퀘스트 진행 중',
-      content:
-          '${snapshot.questTitle}  ${_formatElapsed(snapshot.elapsedSeconds)}',
+      content: snapshot.questTitle.isEmpty
+          ? '타이머가 백그라운드에서 실행 중입니다.'
+          : snapshot.questTitle,
     );
   }
 
   Future<void> emitSnapshot(QuestTimerSnapshot snapshot) async {
     service.invoke(_questTimerTickEvent, snapshot.toMap());
-    await updateNotification(snapshot);
   }
 
   void stopTicker() {
@@ -380,6 +481,7 @@ void questTimerBackgroundOnStart(ServiceInstance service) async {
 
   Future<void> startTicker(QuestTimerSnapshot snapshot) async {
     stopTicker();
+    await updateOngoingNotification(snapshot);
     await emitSnapshot(snapshot);
 
     ticker = Timer.periodic(const Duration(seconds: 1), (_) async {
@@ -388,11 +490,19 @@ void questTimerBackgroundOnStart(ServiceInstance service) async {
         return;
       }
 
+      final wasBeforeComplete =
+          current.defaultDurationSeconds > 0 &&
+          current.elapsedSeconds < current.defaultDurationSeconds;
       final nextSnapshot = current.copyWith(
         elapsedSeconds: current.elapsedSeconds + 1,
       );
       await persistSnapshot(nextSnapshot);
       await emitSnapshot(nextSnapshot);
+
+      if (wasBeforeComplete &&
+          nextSnapshot.elapsedSeconds >= nextSnapshot.defaultDurationSeconds) {
+        await _showQuestTimerCompleteNotification(nextSnapshot);
+      }
     });
   }
 
@@ -438,11 +548,4 @@ void questTimerBackgroundOnStart(ServiceInstance service) async {
     await clearSnapshot();
     service.stopSelf();
   });
-}
-
-String _formatElapsed(int elapsedSeconds) {
-  final hours = (elapsedSeconds ~/ 3600).toString().padLeft(2, '0');
-  final minutes = ((elapsedSeconds % 3600) ~/ 60).toString().padLeft(2, '0');
-  final seconds = (elapsedSeconds % 60).toString().padLeft(2, '0');
-  return '$hours:$minutes:$seconds';
 }

@@ -7,11 +7,13 @@ class QuestTimerCategoryTimes extends StatelessWidget {
     required this.category,
     required this.elapsedSeconds,
     required this.formatDuration,
+    this.compact = false,
   });
 
   final String category;
   final int elapsedSeconds;
   final String Function(Duration duration) formatDuration;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +53,9 @@ class QuestTimerCategoryTimes extends StatelessWidget {
             timeLabel: items[index].category == normalizedCategory
                 ? formatDuration(Duration(seconds: elapsedSeconds))
                 : '00:00:00',
+            compact: compact,
           ),
-          if (index != items.length - 1) const SizedBox(height: 12),
+          if (index != items.length - 1) SizedBox(height: compact ? 7 : 12),
         ],
       ],
     );
@@ -60,46 +63,55 @@ class QuestTimerCategoryTimes extends StatelessWidget {
 }
 
 class _CategoryTimeBar extends StatelessWidget {
-  const _CategoryTimeBar({required this.item, required this.timeLabel});
+  const _CategoryTimeBar({
+    required this.item,
+    required this.timeLabel,
+    required this.compact,
+  });
 
   final _CategoryTimeItem item;
   final String timeLabel;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      height: compact ? 30 : 38,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 11 : 20),
       decoration: BoxDecoration(
         color: item.color,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(compact ? 11 : 14),
         boxShadow: [
           BoxShadow(
             color: item.color.withValues(alpha: 0.34),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            blurRadius: compact ? 8 : 12,
+            offset: Offset(0, compact ? 4 : 6),
           ),
         ],
       ),
       child: Row(
         children: [
-          Icon(item.icon, size: 18, color: Colors.black),
-          const SizedBox(width: 18),
-          Text(
-            item.label,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: Colors.black,
+          Icon(item.icon, size: compact ? 15 : 18, color: Colors.black),
+          SizedBox(width: compact ? 8 : 18),
+          Expanded(
+            child: Text(
+              item.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: compact ? 12 : 15,
+                fontWeight: FontWeight.w800,
+                color: Colors.black,
+              ),
             ),
           ),
-          const Spacer(),
+          SizedBox(width: compact ? 6 : 12),
           Text(
             timeLabel,
-            style: const TextStyle(
-              fontSize: 12,
+            style: TextStyle(
+              fontSize: compact ? 10 : 12,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF8C919A),
+              color: const Color(0xFF8C919A),
             ),
           ),
         ],

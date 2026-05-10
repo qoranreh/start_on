@@ -89,51 +89,73 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF1F3F8),
         body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(22, 16, 22, 32),
-            children: [
-              QuestTimerHeader(onBack: _popWithProgress, onEdit: _editQuest),
-              const SizedBox(height: 18),
-              // 메인 카드 안에서 퀘스트 정보, 타이머, 액션, 인증 사진 흐름을 순서대로 보여준다.
-              QuestTimerContentCard(
-                questSummary: QuestTimerSummary(
-                  quest: _quest,
-                  userLevel: widget.userLevel,
-                  earnedExp: _calculateEarnedExp(),
-                  maxDurationSeconds: maxDurationSeconds,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final useLandscapeLayout =
+                  constraints.maxWidth > constraints.maxHeight &&
+                  constraints.maxWidth >= 640;
+
+              return ListView(
+                padding: EdgeInsets.fromLTRB(
+                  useLandscapeLayout ? 30 : 22,
+                  useLandscapeLayout ? 20 : 16,
+                  useLandscapeLayout ? 30 : 22,
+                  32,
                 ),
-                countdown: QuestTimerCountdown(
-                  controller: _countDownController,
-                  durationSeconds: maxDurationSeconds,
-                  elapsedSeconds: _elapsedSeconds,
-                  timerViewRevision: _timerViewRevision,
-                  running: _running,
-                  onComplete: _handleTimerComplete,
-                  onToggleTimer: _toggleTimer,
-                  formatDuration: _formatDuration,
-                ),
-                actionButtons: QuestTimerActionButtons(
-                  isCompleting: _isCompleting,
-                  running: _running,
-                  canReset: _elapsedSeconds > 0,
-                  canComplete: _elapsedSeconds > 60,
-                  onResetTimer: _resetTimer,
-                  onToggleTimer: _toggleTimer,
-                  onStopTimer: _completeQuest,
-                ),
-                proofSection: QuestTimerProofSection(
-                  proofImagePath: _proofImage?.path,
-                  isCompleting: _isCompleting,
-                  onPickGallery: () => _pickProofImage(ImageSource.gallery),
-                  onClearImage: () => setState(() => _proofImage = null),
-                ),
-                categoryTimes: QuestTimerCategoryTimes(
-                  category: _quest.category,
-                  elapsedSeconds: _elapsedSeconds,
-                  formatDuration: _formatDuration,
-                ),
-              ),
-            ],
+                children: [
+                  if (!useLandscapeLayout) ...[
+                    QuestTimerHeader(
+                      onBack: _popWithProgress,
+                      onEdit: _editQuest,
+                    ),
+                    const SizedBox(height: 18),
+                  ],
+                  // 세로 화면은 기존 흐름을 유지하고, 가로 화면에서만 타이머를 오른쪽에 배치한다.
+                  QuestTimerContentCard(
+                    useLandscapeLayout: useLandscapeLayout,
+                    questSummary: QuestTimerSummary(
+                      quest: _quest,
+                      userLevel: widget.userLevel,
+                      earnedExp: _calculateEarnedExp(),
+                      maxDurationSeconds: maxDurationSeconds,
+                    ),
+                    countdown: QuestTimerCountdown(
+                      controller: _countDownController,
+                      durationSeconds: maxDurationSeconds,
+                      elapsedSeconds: _elapsedSeconds,
+                      timerViewRevision: _timerViewRevision,
+                      running: _running,
+                      onComplete: _handleTimerComplete,
+                      onToggleTimer: _toggleTimer,
+                      formatDuration: _formatDuration,
+                    ),
+                    actionButtons: QuestTimerActionButtons(
+                      isCompleting: _isCompleting,
+                      running: _running,
+                      canReset: _elapsedSeconds > 0,
+                      canComplete: _elapsedSeconds > 60,
+                      onResetTimer: _resetTimer,
+                      onToggleTimer: _toggleTimer,
+                      onStopTimer: _completeQuest,
+                    ),
+                    proofSection: QuestTimerProofSection(
+                      proofImagePath: _proofImage?.path,
+                      isCompleting: _isCompleting,
+                      compact: useLandscapeLayout,
+                      onPickCamera: () => _pickProofImage(ImageSource.camera),
+                      onPickGallery: () => _pickProofImage(ImageSource.gallery),
+                      onClearImage: () => setState(() => _proofImage = null),
+                    ),
+                    categoryTimes: QuestTimerCategoryTimes(
+                      category: _quest.category,
+                      elapsedSeconds: _elapsedSeconds,
+                      compact: useLandscapeLayout,
+                      formatDuration: _formatDuration,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),

@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // 상단 헤더, 카테고리, 퀘스트 목록, 완료 기록을 세로로 배치합니다.
     return ListView(
       controller: _scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 118),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 118),
       children: [
         HomeHeaderSection(
           todayLabel: todayLabel,

@@ -3,61 +3,93 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_neumorphic_plus/flutter_neumorphic.dart' as neu;
 
+const double _compactProofSectionHeight = 141;
+
 class QuestTimerProofSection extends StatelessWidget {
   const QuestTimerProofSection({
     super.key,
     required this.proofImagePath,
     required this.isCompleting,
+    required this.onPickCamera,
     required this.onPickGallery,
     required this.onClearImage,
+    this.compact = false,
   });
 
   final String? proofImagePath;
   final bool isCompleting;
+  final VoidCallback onPickCamera;
   final VoidCallback onPickGallery;
   final VoidCallback onClearImage;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     if (proofImagePath == null) {
-      return GestureDetector(
-        onTap: isCompleting ? null : onPickGallery,
-        child: Opacity(
-          opacity: isCompleting ? 0.48 : 1,
-          child: neu.Neumorphic(
-            style: neu.NeumorphicStyle(
-              depth: -5,
-              intensity: 0.92,
-              surfaceIntensity: 0.22,
-              color: const Color(0xFFF1F3F8),
-              shadowLightColor: Colors.white,
-              shadowDarkColor: const Color(0xFFD0D7E5),
-              boxShape: neu.NeumorphicBoxShape.roundRect(
-                BorderRadius.circular(12),
-              ),
-            ),
-            child: SizedBox(
-              width: double.infinity,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: const Column(
-                  children: [
-                    Icon(Icons.upload_outlined, size: 20, color: Colors.black),
-                    SizedBox(height: 3),
-                    Text(
-                      '사진 업로드',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.black,
-                        fontWeight: FontWeight.w700,
+      return Stack(
+        children: [
+          GestureDetector(
+            onTap: isCompleting ? null : onPickGallery,
+            child: Opacity(
+              opacity: isCompleting ? 0.48 : 1,
+              child: neu.Neumorphic(
+                style: neu.NeumorphicStyle(
+                  depth: -5,
+                  intensity: 0.92,
+                  surfaceIntensity: 0.22,
+                  color: const Color(0xFFF1F3F8),
+                  shadowLightColor: Colors.white,
+                  shadowDarkColor: const Color(0xFFD0D7E5),
+                  boxShape: neu.NeumorphicBoxShape.roundRect(
+                    BorderRadius.circular(12),
+                  ),
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: compact ? _compactProofSectionHeight : null,
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        vertical: compact ? 10 : 12,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.upload_outlined,
+                            size: compact ? 18 : 20,
+                            color: Colors.black,
+                          ),
+                          SizedBox(height: compact ? 2 : 3),
+                          Text(
+                            '사진 업로드',
+                            style: TextStyle(
+                              fontSize: compact ? 10 : 11,
+                              color: Colors.black,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+          Positioned(
+            top: compact ? 6 : 9,
+            right: compact ? 6 : 9,
+            child: Tooltip(
+              message: '카메라로 촬영',
+              child: _QuestTimerProofIconButton(
+                icon: Icons.photo_camera_outlined,
+                onTap: isCompleting ? null : onPickCamera,
+                size: compact ? 30 : 34,
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -75,24 +107,24 @@ class QuestTimerProofSection extends StatelessWidget {
               BorderRadius.circular(12),
             ),
           ),
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(compact ? 6 : 8),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(compact ? 7 : 8),
             child: Image.file(
               File(proofImagePath!),
               width: double.infinity,
-              height: 180,
+              height: compact ? _compactProofSectionHeight - 12 : 180,
               fit: BoxFit.cover,
             ),
           ),
         ),
         Positioned(
-          top: 14,
-          right: 14,
+          top: compact ? 10 : 14,
+          right: compact ? 10 : 14,
           child: _QuestTimerProofIconButton(
             icon: Icons.close_rounded,
             onTap: isCompleting ? null : onClearImage,
-            size: 38,
+            size: compact ? 32 : 38,
           ),
         ),
       ],

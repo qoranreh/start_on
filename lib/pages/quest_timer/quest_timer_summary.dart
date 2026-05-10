@@ -22,66 +22,69 @@ class QuestTimerSummary extends StatelessWidget {
 
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 320, maxWidth: 320),
-        child: neu.Neumorphic(
-          style: neu.NeumorphicStyle(
-            depth: 7,
-            intensity: 0.9,
-            surfaceIntensity: 0.24,
-            color: const Color(0xFFF1F3F8),
-            shadowLightColor: Colors.white,
-            shadowDarkColor: const Color(0xFFD0D7E5),
-            boxShape: neu.NeumorphicBoxShape.roundRect(
-              BorderRadius.circular(14),
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: SizedBox(
+          width: double.infinity,
+          child: neu.Neumorphic(
+            style: neu.NeumorphicStyle(
+              depth: 7,
+              intensity: 0.9,
+              surfaceIntensity: 0.24,
+              color: const Color(0xFFF1F3F8),
+              shadowLightColor: Colors.white,
+              shadowDarkColor: const Color(0xFFD0D7E5),
+              boxShape: neu.NeumorphicBoxShape.roundRect(
+                BorderRadius.circular(14),
+              ),
             ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-          child: Row(
-            children: [
-              Icon(
-                _questTitleIconFor(categoryStyle.category),
-                size: 22,
-                color: Colors.black,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  quest.title,
-                  textAlign: TextAlign.left,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF1C2940),
-                  ),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+            child: Row(
+              children: [
+                Icon(
+                  _questTitleIconFor(categoryStyle.category),
+                  size: 22,
+                  color: Colors.black,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Lv.$userLevel',
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    quest.title,
+                    textAlign: TextAlign.left,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
                       color: Color(0xFF1C2940),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$earnedExp EXP',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF7E899D),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Lv.$userLevel',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        color: Color(0xFF1C2940),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(height: 4),
+                    Text(
+                      '$earnedExp EXP',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF7E899D),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
