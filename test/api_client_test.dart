@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -60,6 +61,44 @@ void main() {
       expect(capturedHeaders.containsKey('Authorization'), isFalse);
     },
   );
+
+  test('client normalizes request timeout failures', () async {
+    final apiClient = ApiClient(
+      baseUrl: 'http://localhost/api/v1',
+      timeout: const Duration(milliseconds: 1),
+      httpClient: MockClient((request) async {
+        await Future<void>.delayed(const Duration(seconds: 1));
+        return _okResponse();
+      }),
+    );
+
+    await expectLater(
+      apiClient.get('/profile'),
+      throwsA(
+        isA<ApiClientException>()
+            .having((error) => error.statusCode, 'statusCode', 0)
+            .having((error) => error.code, 'code', 'request_timeout'),
+      ),
+    );
+  });
+
+  test('client normalizes network failures', () async {
+    final apiClient = ApiClient(
+      baseUrl: 'http://localhost/api/v1',
+      httpClient: MockClient((request) async {
+        throw const SocketException('Network is unreachable');
+      }),
+    );
+
+    await expectLater(
+      apiClient.get('/profile'),
+      throwsA(
+        isA<ApiClientException>()
+            .having((error) => error.statusCode, 'statusCode', 0)
+            .having((error) => error.code, 'code', 'network_error'),
+      ),
+    );
+  });
 }
 
 http.Response _okResponse() {
