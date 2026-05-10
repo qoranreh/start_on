@@ -20,7 +20,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final AppSettingsStore _settingsStore = const AppSettingsStore();
   final LocalDataStore _localDataStore = const LocalDataStore();
-  final NotionSyncService _notionSyncService = const NotionSyncService();
+  final NotionSyncService _notionSyncService = NotionSyncService();
 
   bool _notificationsEnabled = true;
   bool _vibrationEnabled = true;
@@ -37,6 +37,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _notionSyncService.close();
+    super.dispose();
   }
 
   @override
@@ -298,12 +304,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     bool enableSync = false,
   }) async {
     final settings = await _settingsStore.load();
-    final apiToken = (input?.apiToken ?? settings.notionApiToken).trim();
+    final apiToken = input?.apiToken.trim() ?? '';
     final databaseInput = (input?.databaseInput ?? settings.notionDatabaseId)
         .trim();
+    final isConnecting = input != null;
 
-    if (apiToken.isEmpty || databaseInput.isEmpty) {
+    if (isConnecting && (apiToken.isEmpty || databaseInput.isEmpty)) {
       _showMessage('먼저 Notion integration secret과 데이터베이스 주소를 입력해 주세요.');
+      return false;
+    }
+    if (!isConnecting && !settings.notionSyncEnabled) {
+      _showMessage('먼저 Notion 연결을 완료해 주세요.');
       return false;
     }
 
@@ -313,13 +324,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _isNotionSyncBusy = true);
 
     try {
-      final result = await _notionSyncService.syncDatabase(
-        NotionSyncConfig(apiToken: apiToken, databaseInput: databaseInput),
-      );
+      final result = isConnecting
+          ? await _notionSyncService.syncDatabase(
+              NotionSyncConfig(
+                apiToken: apiToken,
+                databaseInput: databaseInput,
+              ),
+            )
+          : await _notionSyncService.syncSavedConnection();
       await _settingsStore.save(
         settings.copyWith(
           notionSyncEnabled: true,
-          notionApiToken: apiToken,
+          notionApiToken: '',
           notionDatabaseId: result.databaseId,
           notionDatabaseTitle: result.databaseTitle,
         ),
@@ -338,7 +354,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isNotionSyncEnabled = true;
         _notionDatabaseId = result.databaseId;
         _notionDatabaseTitle = result.databaseTitle;
-        _notionApiTokenDraft = apiToken;
+        _notionApiTokenDraft = '';
         _notionDatabaseInputDraft = result.databaseId;
       });
       _showMessage(
