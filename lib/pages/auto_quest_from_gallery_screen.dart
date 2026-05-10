@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:start_on/models/quest_generation_api_models.dart';
 import 'package:start_on/pages/add_quest_screen.dart';
 import 'package:start_on/models/quest_category.dart';
 import 'package:start_on/models/quest_item.dart';
+import 'package:start_on/repositories/quest_text_extraction_repository.dart';
 import 'package:start_on/services/quest_candidate_generator.dart';
 import 'package:start_on/services/quest_ocr_service.dart';
 import 'package:start_on/widgets/common.dart';
@@ -22,6 +24,8 @@ class _AutoQuestFromGalleryScreenState
     extends State<AutoQuestFromGalleryScreen> {
   final ImagePicker _imagePicker = ImagePicker();
   final QuestOcrService _ocrService = QuestOcrService();
+  final QuestTextExtractionRepository _textExtractionRepository =
+      QuestTextExtractionRepository();
   final QuestCandidateGenerator _candidateGenerator = QuestCandidateGenerator();
   final TextEditingController _ocrTextController = TextEditingController();
 
@@ -42,6 +46,7 @@ class _AutoQuestFromGalleryScreenState
 
   @override
   void dispose() {
+    _textExtractionRepository.close();
     _ocrTextController.dispose();
     super.dispose();
   }
@@ -298,7 +303,7 @@ class _AutoQuestFromGalleryScreenState
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        '백엔드 연동 전 단계라서 현재는 OCR 텍스트를 앱 내부 규칙으로 후보화합니다.',
+                        'OCR은 기기에서 실행하고, 후보 생성은 백엔드 /quests/from-text를 우선 사용합니다.',
                         style: TextStyle(
                           fontSize: 13,
                           height: 1.5,
@@ -412,7 +417,15 @@ class _AutoQuestFromGalleryScreenState
       _errorText = null;
     });
 
-    final candidates = _candidateGenerator.generateFromText(sourceText);
+    var didUseLocalFallback = false;
+    late final List<QuestItem> candidates;
+    try {
+      final response = await _textExtractionRepository.extract(sourceText);
+      candidates = _questItemsFromServerCandidates(response.quests);
+    } catch (_) {
+      didUseLocalFallback = true;
+      candidates = _candidateGenerator.generateFromText(sourceText);
+    }
 
     if (!mounted) {
       return;
@@ -425,8 +438,29 @@ class _AutoQuestFromGalleryScreenState
       _isGeneratingCandidates = false;
       if (candidates.isEmpty) {
         _errorText = '텍스트는 읽었지만 할 일 형태의 줄을 찾지 못했어요. 텍스트를 다듬거나 후보를 직접 추가해 주세요.';
+      } else if (didUseLocalFallback) {
+        _errorText = '서버 후보 생성에 실패해 앱 내부 규칙으로 후보를 만들었어요.';
       }
     });
+  }
+
+  List<QuestItem> _questItemsFromServerCandidates(
+    List<QuestCandidateResponse> candidates,
+  ) {
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    return candidates.asMap().entries.map((entry) {
+      final candidate = entry.value;
+      final difficulty = questDifficultyFromApi(candidate.difficulty);
+      return QuestItem(
+        id: 'ocr:$timestamp:${entry.key}',
+        title: candidate.title,
+        exp: candidate.exp,
+        difficulty: difficulty,
+        category: normalizeQuestCategory(candidate.category),
+        elapsedSeconds: 0,
+        defaultDurationSeconds: candidate.defaultDurationSeconds,
+      );
+    }).toList();
   }
 
   Future<void> _addManualCandidate() async {

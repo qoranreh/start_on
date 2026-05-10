@@ -1,4 +1,5 @@
 import 'package:start_on/models/quest_category.dart';
+import 'package:start_on/models/quest_api_models.dart';
 
 const _questItemNoChange = Object();
 
@@ -62,7 +63,7 @@ class QuestItem {
   }
 
   factory QuestItem.fromJson(Map<String, dynamic> json) {
-    final difficulty = json['difficulty'] as String? ?? '보통';
+    final difficulty = normalizeQuestDifficulty(json['difficulty'] as String?);
     final rawDueDate = json['dueDate'] as String?;
     return QuestItem(
       id:
@@ -81,13 +82,68 @@ class QuestItem {
           : normalizeQuestDueDate(DateTime.tryParse(rawDueDate)),
     );
   }
+
+  factory QuestItem.fromApiResponse(QuestItemResponse response) {
+    return QuestItem(
+      id: response.id,
+      title: response.title,
+      exp: response.exp,
+      difficulty: questDifficultyFromApi(response.difficulty),
+      category: normalizeQuestCategory(response.category),
+      elapsedSeconds: response.elapsedSeconds,
+      defaultDurationSeconds: response.defaultDurationSeconds,
+    );
+  }
+
+  QuestCreateRequest toCreateRequest() {
+    return QuestCreateRequest(
+      title: title,
+      exp: exp,
+      difficulty: questDifficultyToApi(difficulty),
+      category: normalizeQuestCategory(category),
+      defaultDurationSeconds: defaultDurationSeconds,
+    );
+  }
+
+  QuestUpdateRequest toUpdateRequest() {
+    return QuestUpdateRequest(
+      title: title,
+      exp: exp,
+      difficulty: questDifficultyToApi(difficulty),
+      category: normalizeQuestCategory(category),
+      elapsedSeconds: elapsedSeconds,
+      defaultDurationSeconds: defaultDurationSeconds,
+    );
+  }
 }
 
 int defaultQuestDurationSecondsForDifficulty(String difficulty) {
-  return switch (difficulty) {
+  return switch (normalizeQuestDifficulty(difficulty)) {
     '쉬움' => 25 * 60,
     '보통' => 45 * 60,
     _ => 90 * 60,
+  };
+}
+
+String normalizeQuestDifficulty(String? difficulty) {
+  return switch (difficulty) {
+    '쉬움' || 'easy' => '쉬움',
+    '보통' || 'normal' => '보통',
+    '어려움' || 'hard' => '어려움',
+    _ => '보통',
+  };
+}
+
+String questDifficultyFromApi(String difficulty) {
+  return normalizeQuestDifficulty(difficulty);
+}
+
+String questDifficultyToApi(String difficulty) {
+  return switch (normalizeQuestDifficulty(difficulty)) {
+    '쉬움' => 'easy',
+    '보통' => 'normal',
+    '어려움' => 'hard',
+    _ => 'normal',
   };
 }
 

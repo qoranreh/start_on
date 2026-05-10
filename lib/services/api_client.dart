@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:start_on/models/api_response.dart';
@@ -32,7 +33,7 @@ class ApiClient {
 
   static const String _defaultBaseUrl = String.fromEnvironment(
     'START_ON_API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api/v1',
+    defaultValue: 'http://192.168.219.170:8000/api/v1',
   );
 
   final String baseUrl;
@@ -83,12 +84,36 @@ class ApiClient {
     final headers = await _buildHeaders();
     final encodedBody = body == null ? null : jsonEncode(body);
 
-    final response = await _send(
-      method.toUpperCase(),
-      uri,
-      headers: headers,
-      body: encodedBody,
-    ).timeout(_timeout);
+    final http.Response response;
+    try {
+      response = await _send(
+        method.toUpperCase(),
+        uri,
+        headers: headers,
+        body: encodedBody,
+      ).timeout(_timeout);
+    } on TimeoutException catch (error) {
+      throw ApiClientException(
+        statusCode: 0,
+        code: 'request_timeout',
+        message: 'API server response timed out.',
+        cause: error,
+      );
+    } on SocketException catch (error) {
+      throw ApiClientException(
+        statusCode: 0,
+        code: 'network_error',
+        message: 'Failed to reach API server.',
+        cause: error,
+      );
+    } on http.ClientException catch (error) {
+      throw ApiClientException(
+        statusCode: 0,
+        code: 'network_error',
+        message: 'Failed to reach API server.',
+        cause: error,
+      );
+    }
 
     final decodedBody = _decodeResponseBody(response);
     if (response.statusCode < 200 || response.statusCode >= 300) {

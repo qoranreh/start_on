@@ -1,4 +1,6 @@
+import 'package:start_on/models/quest_api_models.dart';
 import 'package:start_on/models/quest_category.dart';
+import 'package:start_on/models/quest_item.dart';
 
 class CompletedQuestRecord {
   CompletedQuestRecord({
@@ -21,6 +23,21 @@ class CompletedQuestRecord {
   final int elapsedSeconds;
   final String? proofImagePath;
 
+  factory CompletedQuestRecord.fromApiResponse(
+    CompletedQuestRecordResponse response,
+  ) {
+    return CompletedQuestRecord(
+      questId: response.questId,
+      title: response.title,
+      difficulty: questDifficultyFromApi(response.difficulty),
+      category: normalizeQuestCategory(response.category),
+      earnedExp: response.earnedExp,
+      completedAt: response.completedAt,
+      elapsedSeconds: response.elapsedSeconds,
+      proofImagePath: response.proofImagePath,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'questId': questId,
@@ -38,7 +55,7 @@ class CompletedQuestRecord {
     return CompletedQuestRecord(
       questId: json['questId'] as String? ?? '',
       title: json['title'] as String? ?? '',
-      difficulty: json['difficulty'] as String? ?? '보통',
+      difficulty: normalizeQuestDifficulty(json['difficulty'] as String?),
       category: normalizeQuestCategory(json['category'] as String?),
       earnedExp: json['earnedExp'] as int? ?? 0,
       completedAt: json['completedAt'] as String? ?? '',

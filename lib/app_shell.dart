@@ -1,6 +1,10 @@
 import 'dart:async';
 
 import 'package:start_on/models/app_local_data.dart';
+import 'package:start_on/models/dungeon_api_models.dart';
+import 'package:start_on/models/profile_api_models.dart';
+import 'package:start_on/models/quest_api_models.dart';
+import 'package:start_on/models/stats_api_models.dart';
 import 'package:start_on/pages/add_quest_screen.dart';
 import 'package:start_on/pages/auto_quest_from_gallery_screen.dart';
 import 'package:start_on/pages/dungeon_screen.dart';
@@ -12,6 +16,11 @@ import 'package:start_on/pages/ranking_screen.dart';
 import 'package:start_on/pages/record_screen.dart';
 import 'package:start_on/pages/settings_screen.dart';
 import 'package:start_on/repositories/auth_repository.dart';
+import 'package:start_on/repositories/dungeon_repository.dart';
+import 'package:start_on/repositories/profile_repository.dart';
+import 'package:start_on/repositories/quest_repository.dart';
+import 'package:start_on/repositories/stats_repository.dart';
+import 'package:start_on/services/api_client.dart';
 import 'package:start_on/services/quest_timer_background_service.dart';
 import 'package:start_on/storage/app_settings_store.dart';
 import 'package:start_on/storage/auth_session_store.dart';
@@ -30,10 +39,24 @@ const _systemUiOverlayStyle = SystemUiOverlayStyle(
 );
 
 class AdFocusApp extends StatelessWidget {
-  const AdFocusApp({super.key, AuthRepository? authRepository})
-    : _authRepository = authRepository;
+  const AdFocusApp({
+    super.key,
+    AuthRepository? authRepository,
+    ProfileRepository? profileRepository,
+    QuestRepository? questRepository,
+    StatsRepository? statsRepository,
+    DungeonRepository? dungeonRepository,
+  }) : _authRepository = authRepository,
+       _profileRepository = profileRepository,
+       _questRepository = questRepository,
+       _statsRepository = statsRepository,
+       _dungeonRepository = dungeonRepository;
 
   final AuthRepository? _authRepository;
+  final ProfileRepository? _profileRepository;
+  final QuestRepository? _questRepository;
+  final StatsRepository? _statsRepository;
+  final DungeonRepository? _dungeonRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -51,16 +74,32 @@ class AdFocusApp extends StatelessWidget {
           ),
           fontFamily: 'Pretendard',
         ),
-        home: _AuthGate(authRepository: _authRepository),
+        home: _AuthGate(
+          authRepository: _authRepository,
+          profileRepository: _profileRepository,
+          questRepository: _questRepository,
+          statsRepository: _statsRepository,
+          dungeonRepository: _dungeonRepository,
+        ),
       ),
     );
   }
 }
 
 class _AuthGate extends StatefulWidget {
-  const _AuthGate({this.authRepository});
+  const _AuthGate({
+    this.authRepository,
+    this.profileRepository,
+    this.questRepository,
+    this.statsRepository,
+    this.dungeonRepository,
+  });
 
   final AuthRepository? authRepository;
+  final ProfileRepository? profileRepository;
+  final QuestRepository? questRepository;
+  final StatsRepository? statsRepository;
+  final DungeonRepository? dungeonRepository;
 
   @override
   State<_AuthGate> createState() => _AuthGateState();
@@ -115,6 +154,10 @@ class _AuthGateState extends State<_AuthGate> {
     return AdFocusShell(
       session: session,
       onChangeAccount: _handleAccountChange,
+      profileRepository: widget.profileRepository,
+      questRepository: widget.questRepository,
+      statsRepository: widget.statsRepository,
+      dungeonRepository: widget.dungeonRepository,
     );
   }
 
@@ -198,11 +241,19 @@ class AdFocusShell extends StatefulWidget {
   const AdFocusShell({
     required this.session,
     required this.onChangeAccount,
+    this.profileRepository,
+    this.questRepository,
+    this.statsRepository,
+    this.dungeonRepository,
     super.key,
   });
 
   final AuthSession session;
   final Future<void> Function() onChangeAccount;
+  final ProfileRepository? profileRepository;
+  final QuestRepository? questRepository;
+  final StatsRepository? statsRepository;
+  final DungeonRepository? dungeonRepository;
 
   @override
   State<AdFocusShell> createState() => _AdFocusShellState();
@@ -216,6 +267,15 @@ class _AdFocusShellState extends State<AdFocusShell>
   final QuestTimerBackgroundService _questTimerService =
       QuestTimerBackgroundService.instance;
 
+  late final ProfileRepository? _profileRepository;
+  late final QuestRepository? _questRepository;
+  late final StatsRepository? _statsRepository;
+  late final DungeonRepository? _dungeonRepository;
+  late final bool _usesServerData;
+  late final bool _ownsProfileRepository;
+  late final bool _ownsQuestRepository;
+  late final bool _ownsStatsRepository;
+  late final bool _ownsDungeonRepository;
   int _currentIndex = 0;
   int _celebrationSeed = 0;
   bool _isLoading = true;
@@ -259,6 +319,26 @@ class _AdFocusShellState extends State<AdFocusShell>
   @override
   void initState() {
     super.initState();
+    _usesServerData =
+        !widget.session.isLocalOnly && widget.session.hasBearerToken;
+    _profileRepository = _usesServerData
+        ? widget.profileRepository ?? ProfileRepository()
+        : null;
+    _questRepository = _usesServerData
+        ? widget.questRepository ?? QuestRepository()
+        : null;
+    _statsRepository = _usesServerData
+        ? widget.statsRepository ?? StatsRepository()
+        : null;
+    _dungeonRepository = _usesServerData
+        ? widget.dungeonRepository ?? DungeonRepository()
+        : null;
+    _ownsProfileRepository =
+        _usesServerData && widget.profileRepository == null;
+    _ownsQuestRepository = _usesServerData && widget.questRepository == null;
+    _ownsStatsRepository = _usesServerData && widget.statsRepository == null;
+    _ownsDungeonRepository =
+        _usesServerData && widget.dungeonRepository == null;
     _listenToQuestTimerTicks();
     unawaited(_initializeAppState());
   }
@@ -268,6 +348,18 @@ class _AdFocusShellState extends State<AdFocusShell>
     _lifecycleObserver.dispose();
     _questTimerTickSubscription?.cancel();
     _fabPopController.dispose();
+    if (_ownsProfileRepository) {
+      _profileRepository?.close();
+    }
+    if (_ownsQuestRepository) {
+      _questRepository?.close();
+    }
+    if (_ownsStatsRepository) {
+      _statsRepository?.close();
+    }
+    if (_ownsDungeonRepository) {
+      _dungeonRepository?.close();
+    }
     super.dispose();
   }
 
@@ -291,7 +383,7 @@ class _AdFocusShellState extends State<AdFocusShell>
     final screens = [
       HomeScreen(
         data: _localData,
-        userName: widget.session.displayName,
+        userName: _homeUserName,
         onAddQuest: _openAddQuest,
         onAddQuestForCategory: _openAddQuestForCategory,
         onQuestTap: _openQuestTimer,
@@ -362,6 +454,13 @@ class _AdFocusShellState extends State<AdFocusShell>
     setState(() => _currentIndex = index);
   }
 
+  String get _homeUserName {
+    if (_usesServerData && _localData.userName.trim().isNotEmpty) {
+      return _localData.userName;
+    }
+    return widget.session.displayName;
+  }
+
   Future<void> _openAddQuest() async {
     await _openAddQuestScreen();
   }
@@ -381,7 +480,14 @@ class _AdFocusShellState extends State<AdFocusShell>
       return;
     }
 
-    _setLocalData(_localData.copyWith(quests: [quest, ..._localData.quests]));
+    final createdQuest = await _createQuest(quest);
+    if (!mounted || createdQuest == null) {
+      return;
+    }
+
+    _setLocalData(
+      _localData.copyWith(quests: [createdQuest, ..._localData.quests]),
+    );
   }
 
   Future<void> _openQuestTimer(QuestItem quest) async {
@@ -403,16 +509,21 @@ class _AdFocusShellState extends State<AdFocusShell>
       return;
     }
 
-    _handleQuestTimerResult(result);
+    await _handleQuestTimerResult(result);
   }
 
-  void _handleQuestTimerResult(Object? result) {
+  Future<void> _handleQuestTimerResult(Object? result) async {
     if (result == null) {
       return;
     }
 
     if (result case CompletedQuestRecord completedRecord) {
-      _setLocalData(_store.completeQuest(_localData, completedRecord));
+      final savedRecord = await _completeQuest(completedRecord);
+      if (!mounted || savedRecord == null) {
+        return;
+      }
+
+      _setLocalData(_store.completeQuest(_localData, savedRecord));
       _triggerQuestCelebration();
       return;
     }
@@ -460,14 +571,38 @@ class _AdFocusShellState extends State<AdFocusShell>
       return;
     }
 
+    final createdQuests = await _createQuests(generatedQuests);
+    if (!mounted || createdQuests.isEmpty) {
+      return;
+    }
+
     _setLocalData(
-      _localData.copyWith(quests: [...generatedQuests, ..._localData.quests]),
+      _localData.copyWith(quests: [...createdQuests, ..._localData.quests]),
     );
-    _showStyledSnackBar('${generatedQuests.length}개의 퀘스트를 추가했어요.');
+    _showStyledSnackBar('${createdQuests.length}개의 퀘스트를 추가했어요.');
   }
 
   void _deleteQuest(QuestItem quest) {
-    unawaited(_stopQuestTimerIfActive(quest.id));
+    unawaited(_deleteQuestAsync(quest));
+  }
+
+  Future<void> _deleteQuestAsync(QuestItem quest) async {
+    await _stopQuestTimerIfActive(quest.id);
+
+    final questRepository = _questRepository;
+    if (questRepository != null) {
+      try {
+        await questRepository.deleteQuest(quest.id);
+      } catch (error) {
+        _showQuestSyncError('퀘스트를 삭제하지 못했어요.', error);
+        return;
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
     _setLocalData(
       _localData.copyWith(
         quests: _localData.quests.where((item) => item.id != quest.id).toList(),
@@ -475,17 +610,45 @@ class _AdFocusShellState extends State<AdFocusShell>
     );
   }
 
-  void _updateQuest(QuestItem updatedQuest) {
-    _setLocalData(
-      _localData.copyWith(
-        quests: _localData.quests
-            .map((item) => item.id == updatedQuest.id ? updatedQuest : item)
-            .toList(),
-      ),
-    );
+  void _updateQuest(
+    QuestItem updatedQuest, {
+    bool syncServer = true,
+    bool persist = true,
+  }) {
+    _setLocalData(_replaceQuest(_localData, updatedQuest), persist: persist);
+
+    if (syncServer) {
+      unawaited(_syncQuestUpdate(updatedQuest));
+    }
   }
 
   void _completeDungeon(String dungeonId) {
+    unawaited(_completeDungeonAsync(dungeonId));
+  }
+
+  Future<void> _completeDungeonAsync(String dungeonId) async {
+    final dungeonRepository = _dungeonRepository;
+    if (dungeonRepository != null) {
+      try {
+        final clearResult = await dungeonRepository.clearDungeon(dungeonId);
+        if (!mounted) {
+          return;
+        }
+        _setLocalData(
+          _localData.copyWith(
+            credits: clearResult.credits,
+            clearedDungeonIds: _withClearedDungeonId(
+              _localData.clearedDungeonIds,
+              clearResult.dungeonId,
+            ),
+          ),
+        );
+      } catch (error) {
+        _showQuestSyncError('던전 보상을 서버에 저장하지 못했어요.', error);
+      }
+      return;
+    }
+
     const dungeonRewards = {
       'dungeon_meditation': 8,
       'dungeon_evening_workout': 12,
@@ -528,9 +691,11 @@ class _AdFocusShellState extends State<AdFocusShell>
     _scheduleLaunchQuestTimerBottomSheet();
   }
 
-  void _setLocalData(AppLocalData data) {
+  void _setLocalData(AppLocalData data, {bool persist = true}) {
     setState(() => _localData = data);
-    unawaited(_store.save(data));
+    if (persist) {
+      unawaited(_store.save(data));
+    }
   }
 
   void _scheduleLaunchQuestTimerBottomSheet() {
@@ -572,7 +737,8 @@ class _AdFocusShellState extends State<AdFocusShell>
         child: QuestTimerBottomSheet(
           quest: quest,
           notificationsEnabled: _notificationsEnabled,
-          onQuestChanged: _updateQuest,
+          onQuestChanged: (updatedQuest) =>
+              _updateQuest(updatedQuest, syncServer: false, persist: false),
           onOpenFullTimer: (updatedQuest) {
             fullTimerQuest = updatedQuest;
             controller.close();
@@ -609,6 +775,7 @@ class _AdFocusShellState extends State<AdFocusShell>
       return;
     }
 
+    var questToPersist = _findQuest(quest.id) ?? quest;
     if (_notificationsEnabled) {
       final snapshot = await _questTimerService.currentState();
       if (snapshot?.questId == quest.id && snapshot?.isRunning == true) {
@@ -618,7 +785,14 @@ class _AdFocusShellState extends State<AdFocusShell>
           elapsedSeconds: snapshot.elapsedSeconds,
           defaultDurationSeconds: snapshot.defaultDurationSeconds,
         );
+        questToPersist = questToPersist.copyWith(
+          elapsedSeconds: snapshot.elapsedSeconds,
+        );
       }
+    }
+
+    if (questToPersist.elapsedSeconds != quest.elapsedSeconds) {
+      _updateQuest(questToPersist);
     }
   }
 
@@ -743,14 +917,7 @@ class _AdFocusShellState extends State<AdFocusShell>
       return;
     }
 
-    QuestItem? quest;
-    for (final item in _localData.quests) {
-      if (item.id == questId) {
-        quest = item;
-        break;
-      }
-    }
-
+    final quest = _findQuest(questId);
     if (quest == null) {
       return;
     }
@@ -818,6 +985,8 @@ class _AdFocusShellState extends State<AdFocusShell>
 
   Future<AppLocalData> _buildLoadedLocalData() async {
     var data = await _store.load();
+    data = await _loadServerInitialData(data);
+
     final activeSnapshot = await _questTimerService.currentState();
     if (activeSnapshot != null) {
       data = _copyWithQuestElapsed(
@@ -827,6 +996,233 @@ class _AdFocusShellState extends State<AdFocusShell>
       );
     }
     return data;
+  }
+
+  Future<AppLocalData> _loadServerInitialData(AppLocalData fallbackData) async {
+    final profileRepository = _profileRepository;
+    final questRepository = _questRepository;
+    final statsRepository = _statsRepository;
+    final dungeonRepository = _dungeonRepository;
+    if (profileRepository == null ||
+        questRepository == null ||
+        statsRepository == null ||
+        dungeonRepository == null) {
+      return fallbackData;
+    }
+
+    try {
+      final profileFuture = profileRepository.getProfile();
+      final questsFuture = questRepository.listQuests();
+      final statsFuture = statsRepository.getSummary();
+      final dungeonsFuture = dungeonRepository.listDungeons();
+
+      await Future.wait<Object>([
+        profileFuture,
+        questsFuture,
+        statsFuture,
+        dungeonsFuture,
+      ]);
+
+      final data = _copyWithServerInitialData(
+        fallbackData,
+        profile: await profileFuture,
+        quests: await questsFuture,
+        stats: await statsFuture,
+        dungeonList: await dungeonsFuture,
+      );
+      await _store.save(data);
+      return data;
+    } catch (error) {
+      _scheduleQuestSyncError('서버 초기 데이터를 불러오지 못해 저장된 데이터를 표시합니다.', error);
+      return fallbackData;
+    }
+  }
+
+  AppLocalData _copyWithServerInitialData(
+    AppLocalData data, {
+    required ProfileResponse profile,
+    required List<QuestItemResponse> quests,
+    required StatsSummaryResponse stats,
+    required DungeonListResponse dungeonList,
+  }) {
+    return data.copyWith(
+      userName: profile.userName,
+      userRole: profile.userRole,
+      level: profile.level,
+      currentExp: profile.currentExp,
+      maxExp: profile.maxExp,
+      credits: profile.credits,
+      completedQuestCount: profile.completedQuestCount,
+      earnedExp: profile.earnedExp,
+      dailyRewardCount: stats.dailyRewardCount,
+      dailyRewardTarget: stats.dailyRewardTarget,
+      weeklyRewardCount: stats.weeklyRewardCount,
+      weeklyRewardTarget: stats.weeklyRewardTarget,
+      monthlyRewardCount: stats.monthlyRewardCount,
+      monthlyRewardTarget: stats.monthlyRewardTarget,
+      weeklyCompletedCount: stats.weeklyCompletedCount,
+      weeklyCompletionRate: stats.weeklyCompletionRate,
+      weeklyRateDelta: stats.weeklyRateDelta,
+      diligenceStat: stats.diligenceStat,
+      orderStat: stats.orderStat,
+      intelligenceStat: stats.intelligenceStat,
+      healthStat: stats.healthStat,
+      quests: quests.map(QuestItem.fromApiResponse).toList(),
+      clearedDungeonIds: dungeonList.dungeons
+          .where((dungeon) => dungeon.cleared)
+          .map((dungeon) => dungeon.dungeonId)
+          .toList(),
+    );
+  }
+
+  Future<QuestItem?> _createQuest(QuestItem quest) async {
+    final questRepository = _questRepository;
+    if (questRepository == null) {
+      return quest;
+    }
+
+    try {
+      final createdQuest = await questRepository.createQuest(
+        quest.toCreateRequest(),
+      );
+      return QuestItem.fromApiResponse(createdQuest);
+    } catch (error) {
+      _showQuestSyncError('퀘스트를 서버에 저장하지 못했어요.', error);
+      return null;
+    }
+  }
+
+  Future<List<QuestItem>> _createQuests(List<QuestItem> quests) async {
+    final questRepository = _questRepository;
+    if (questRepository == null) {
+      return quests;
+    }
+
+    final createdQuests = <QuestItem>[];
+    for (final quest in quests) {
+      try {
+        final createdQuest = await questRepository.createQuest(
+          quest.toCreateRequest(),
+        );
+        createdQuests.add(QuestItem.fromApiResponse(createdQuest));
+      } catch (error) {
+        _showQuestSyncError('퀘스트 일부를 서버에 저장하지 못했어요.', error);
+        break;
+      }
+    }
+    return createdQuests;
+  }
+
+  Future<void> _syncQuestUpdate(QuestItem quest) async {
+    final questRepository = _questRepository;
+    if (questRepository == null) {
+      return;
+    }
+
+    try {
+      final updatedQuest = await questRepository.updateQuest(
+        quest.id,
+        quest.toUpdateRequest(),
+      );
+      if (!mounted) {
+        return;
+      }
+      _setLocalData(
+        _replaceQuest(_localData, QuestItem.fromApiResponse(updatedQuest)),
+      );
+    } catch (error) {
+      _showQuestSyncError('퀘스트 변경사항을 서버에 저장하지 못했어요.', error);
+    }
+  }
+
+  Future<CompletedQuestRecord?> _completeQuest(
+    CompletedQuestRecord completedRecord,
+  ) async {
+    final questRepository = _questRepository;
+    if (questRepository == null) {
+      return completedRecord;
+    }
+
+    try {
+      final savedRecord = await questRepository.completeQuest(
+        completedRecord.questId,
+        elapsedSeconds: completedRecord.elapsedSeconds,
+        proofImagePath: completedRecord.proofImagePath,
+      );
+      return CompletedQuestRecord.fromApiResponse(savedRecord);
+    } catch (error) {
+      _showQuestSyncError('퀘스트 완료를 서버에 저장하지 못했어요.', error);
+      _updateQuest(_copyQuestWithElapsed(completedRecord), syncServer: false);
+      return null;
+    }
+  }
+
+  QuestItem _copyQuestWithElapsed(CompletedQuestRecord completedRecord) {
+    final quest = _findQuest(completedRecord.questId);
+    if (quest != null) {
+      return quest.copyWith(elapsedSeconds: completedRecord.elapsedSeconds);
+    }
+    return QuestItem(
+      id: completedRecord.questId,
+      title: completedRecord.title,
+      exp: completedRecord.earnedExp,
+      difficulty: completedRecord.difficulty,
+      category: completedRecord.category,
+      elapsedSeconds: completedRecord.elapsedSeconds,
+      defaultDurationSeconds: defaultQuestDurationSecondsForDifficulty(
+        completedRecord.difficulty,
+      ),
+    );
+  }
+
+  QuestItem? _findQuest(String questId) {
+    for (final quest in _localData.quests) {
+      if (quest.id == questId) {
+        return quest;
+      }
+    }
+    return null;
+  }
+
+  List<String> _withClearedDungeonId(
+    List<String> clearedDungeonIds,
+    String dungeonId,
+  ) {
+    if (clearedDungeonIds.contains(dungeonId)) {
+      return clearedDungeonIds;
+    }
+    return [...clearedDungeonIds, dungeonId];
+  }
+
+  AppLocalData _replaceQuest(AppLocalData data, QuestItem updatedQuest) {
+    return data.copyWith(
+      quests: data.quests
+          .map((item) => item.id == updatedQuest.id ? updatedQuest : item)
+          .toList(),
+    );
+  }
+
+  void _scheduleQuestSyncError(String fallbackMessage, Object error) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showQuestSyncError(fallbackMessage, error);
+    });
+  }
+
+  void _showQuestSyncError(String fallbackMessage, Object error) {
+    if (!mounted) {
+      return;
+    }
+    _showStyledSnackBar(_questSyncErrorMessage(fallbackMessage, error));
+  }
+
+  String _questSyncErrorMessage(String fallbackMessage, Object error) {
+    if (error is ApiClientException && error.statusCode == 401) {
+      return '로그인이 만료됐어요. 다시 로그인해 주세요.';
+    }
+    if (error is QuestRepositoryException && error.code == 'quest_not_found') {
+      return '서버에서 퀘스트를 찾지 못했어요.';
+    }
+    return fallbackMessage;
   }
 
   void _triggerQuestCelebration() {
