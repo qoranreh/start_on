@@ -41,64 +41,60 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final viewInsets = MediaQuery.viewInsetsOf(context);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFF),
-      body: AnimatedPadding(
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        padding: EdgeInsets.only(bottom: viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFFFF8EF), Color(0xFFF6FAFF), Color(0xFFFFF0F3)],
-            ),
+      resizeToAvoidBottomInset: true,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFF8EF), Color(0xFFF6FAFF), Color(0xFFFFF0F3)],
           ),
-          child: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight - 56,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 10),
-                        const _LoginHero(),
-                        const SizedBox(height: 34),
-                        _LoginFormCard(
-                          formKey: _formKey,
-                          emailController: _emailController,
-                          passwordController: _passwordController,
-                          isPasswordVisible: _isPasswordVisible,
-                          isSubmitting: _isSubmitting,
-                          mode: _mode,
-                          errorMessage: _errorMessage,
-                          onModeChanged: _handleModeChanged,
-                          onPasswordVisibilityToggle: () {
-                            setState(
-                              () => _isPasswordVisible = !_isPasswordVisible,
-                            );
-                          },
-                          onSubmit: _submit,
-                        ),
-                        const SizedBox(height: 18),
-                        _GuestStartButton(
-                          isEnabled: !_isSubmitting,
-                          onPressed: _startAsGuest,
-                        ),
-                      ],
-                    ),
+        ),
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - 56,
                   ),
-                );
-              },
-            ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 10),
+                      const _LoginHero(),
+                      const SizedBox(height: 34),
+                      _LoginFormCard(
+                        formKey: _formKey,
+                        emailController: _emailController,
+                        passwordController: _passwordController,
+                        isPasswordVisible: _isPasswordVisible,
+                        isSubmitting: _isSubmitting,
+                        mode: _mode,
+                        errorMessage: _errorMessage,
+                        onModeChanged: _handleModeChanged,
+                        onPasswordVisibilityToggle: () {
+                          setState(
+                            () => _isPasswordVisible = !_isPasswordVisible,
+                          );
+                        },
+                        onSubmit: _submit,
+                      ),
+                      const SizedBox(height: 18),
+                      _GuestStartButton(
+                        isEnabled: !_isSubmitting,
+                        onPressed: _startAsGuest,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),
@@ -131,7 +127,17 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) {
         return;
       }
-      setState(() => _errorMessage = _loginErrorMessage(error));
+      final errorMessage = _loginErrorMessage(error);
+      final shouldShowConfirmationDialog = _isSignUpConfirmationRequired(error);
+      setState(() {
+        _errorMessage = errorMessage;
+        _isSubmitting = false;
+      });
+
+      if (shouldShowConfirmationDialog) {
+        await _showSignUpConfirmationDialog();
+      }
+      return;
     }
 
     if (!mounted) {
@@ -173,8 +179,50 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  bool _isSignUpConfirmationRequired(Object error) {
+    if (_mode != _AuthMode.signUp) {
+      return false;
+    }
+    if (error is ApiClientException) {
+      return error.code == 'signup_requires_confirmation';
+    }
+    if (error is AuthRepositoryException) {
+      return error.code == 'signup_requires_confirmation';
+    }
+    return false;
+  }
+
+  Future<void> _showSignUpConfirmationDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('이메일을 확인하시오'),
+          content: const Text('가입한 이메일로 전송된 인증 메일을 확인한 뒤 로그인해 주세요.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('확인'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String _loginErrorMessage(Object error) {
     if (error is ApiClientException) {
+      if (error.code == 'network_error') {
+        return '인증 서버에 연결할 수 없어요. 휴대폰과 PC가 같은 Wi-Fi인지, 백엔드가 켜져 있는지 확인해 주세요.';
+      }
+      if (error.code == 'request_timeout') {
+        return '인증 서버 응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.';
+      }
+      if (error.code == 'supabase_auth_rate_limited') {
+        return _mode == _AuthMode.signUp
+            ? '회원가입 요청이 너무 많아요. 잠시 후 다시 시도해 주세요.'
+            : '로그인 요청이 너무 많아요. 잠시 후 다시 시도해 주세요.';
+      }
       if (error.code == 'supabase_auth_failed') {
         return _mode == _AuthMode.signUp
             ? '이미 가입된 이메일이거나 가입 정보를 확인할 수 없어요.'
@@ -190,6 +238,16 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (error is AuthRepositoryException) {
+      if (error.code == 'supabase_auth_failed') {
+        return _mode == _AuthMode.signUp
+            ? '이미 가입된 이메일이거나 가입 정보를 확인할 수 없어요.'
+            : '이메일 또는 비밀번호를 확인해 주세요.';
+      }
+      if (error.code == 'supabase_auth_rate_limited') {
+        return _mode == _AuthMode.signUp
+            ? '회원가입 요청이 너무 많아요. 잠시 후 다시 시도해 주세요.'
+            : '로그인 요청이 너무 많아요. 잠시 후 다시 시도해 주세요.';
+      }
       return error.message;
     }
 
