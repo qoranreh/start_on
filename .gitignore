@@ -1,46 +1,33 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# Workspace
 .DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
 .idea/
+.vscode/
+*.iml
+*.log
+*.out.log
+*.err.log
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Frontend local output
+/frontend/.dart_tool/
+/frontend/.flutter-plugins-dependencies
+/frontend/.pub-cache/
+/frontend/.pub/
+/frontend/build/
+/frontend/coverage/
+/frontend/android/app/debug/
+/frontend/android/app/profile/
+/frontend/android/app/release/
+/frontend/samsung-SM-S931N-Android-16_2026-04-12_173056.logcat
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-/coverage/
+# Backend local environments and secrets
+/backend/.env
+/backend/.env.*
+!/backend/.env.example
+/backend/.venv/
+/backend/.venv-win/
+/backend/.venv311/
+/backend/**/__pycache__/
+/backend/.pytest_cache/
 
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-/samsung-SM-S931N-Android-16_2026-04-12_173056.logcat
+# Supabase local state
+/supabase/.temp/

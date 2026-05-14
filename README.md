@@ -1,17 +1,28 @@
-# ad_focus
+# Start On
 
-A new Flutter project.
+Monorepo for the Start On frontend and backend.
 
-## Getting Started
+## Structure
 
-This project is a starting point for a Flutter application.
+```text
+start_on/
+  frontend/   Flutter app
+  backend/    FastAPI backend
+  supabase/   Supabase local config and migrations
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Frontend
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+cd frontend
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Backend
+
+```bash
+cd backend
+python -m venv .venv311
+.venv311/bin/pip install -r requirements.txt
+.venv311/bin/python -m app.main
+```
