@@ -11,8 +11,9 @@ class CompletedQuestRecord {
     required this.earnedExp,
     required this.completedAt,
     required this.elapsedSeconds,
+    List<QuestSubtask>? subtasks,
     this.proofImagePath,
-  });
+  }) : subtasks = List.unmodifiable(subtasks ?? const <QuestSubtask>[]);
 
   final String questId;
   final String title;
@@ -21,6 +22,7 @@ class CompletedQuestRecord {
   final int earnedExp;
   final String completedAt;
   final int elapsedSeconds;
+  final List<QuestSubtask> subtasks;
   final String? proofImagePath;
 
   factory CompletedQuestRecord.fromApiResponse(
@@ -34,6 +36,7 @@ class CompletedQuestRecord {
       earnedExp: response.earnedExp,
       completedAt: response.completedAt,
       elapsedSeconds: response.elapsedSeconds,
+      subtasks: const <QuestSubtask>[],
       proofImagePath: response.proofImagePath,
     );
   }
@@ -47,6 +50,7 @@ class CompletedQuestRecord {
       'earnedExp': earnedExp,
       'completedAt': completedAt,
       'elapsedSeconds': elapsedSeconds,
+      'subtasks': subtasks.map((subtask) => subtask.toJson()).toList(),
       'proofImagePath': proofImagePath,
     };
   }
@@ -60,7 +64,19 @@ class CompletedQuestRecord {
       earnedExp: json['earnedExp'] as int? ?? 0,
       completedAt: json['completedAt'] as String? ?? '',
       elapsedSeconds: json['elapsedSeconds'] as int? ?? 0,
+      subtasks: _completedRecordSubtasksFromJson(json['subtasks']),
       proofImagePath: json['proofImagePath'] as String?,
     );
   }
+}
+
+List<QuestSubtask> _completedRecordSubtasksFromJson(Object? value) {
+  if (value is! List) {
+    return const <QuestSubtask>[];
+  }
+
+  return value
+      .whereType<Map>()
+      .map((item) => QuestSubtask.fromJson(Map<String, dynamic>.from(item)))
+      .toList();
 }

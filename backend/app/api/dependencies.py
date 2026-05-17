@@ -14,6 +14,7 @@ from app.repositories.quest_repository import SupabaseQuestRepository
 from app.repositories.raw_input_repository import SupabaseRawInputRepository
 from app.repositories.stats_repository import SupabaseStatsRepository
 from app.repositories.task_candidate_repository import SupabaseTaskCandidateRepository
+from app.repositories.task_repository import SupabaseTaskRepository
 from app.repositories.today_context_repository import SupabaseTodayContextRepository
 from app.repositories.user_bootstrap_repository import SupabaseUserBootstrapRepository
 from app.providers.gemini_provider import GeminiProvider
@@ -27,6 +28,8 @@ from app.services.mediator_service import MediatorService
 from app.services.profile_service import ProfileService
 from app.services.quest_service import QuestService
 from app.services.stats_service import StatsService
+from app.services.task_candidate_review_service import TaskCandidateReviewService
+from app.services.task_commit_service import TaskCommitService
 from app.services.today_planning_service import TodayPlanningService
 
 def get_current_user_id(
@@ -57,6 +60,10 @@ def get_mediator_run_repository() -> SupabaseMediatorRunRepository:
 
 def get_task_candidate_repository() -> SupabaseTaskCandidateRepository:
     return SupabaseTaskCandidateRepository(get_supabase_client())
+
+
+def get_task_repository() -> SupabaseTaskRepository:
+    return SupabaseTaskRepository(get_supabase_client())
 
 
 def get_today_context_repository() -> SupabaseTodayContextRepository:
@@ -114,6 +121,19 @@ def get_intake_service() -> IntakeService:
     return IntakeService(
         raw_input_repository=get_raw_input_repository(),
         mediator_service=get_mediator_service(),
+    )
+
+
+def get_task_commit_service() -> TaskCommitService:
+    return TaskCommitService(
+        task_candidate_repository=get_task_candidate_repository(),
+        task_repository=get_task_repository(),
+    )
+
+
+def get_task_candidate_review_service() -> TaskCandidateReviewService:
+    return TaskCandidateReviewService(
+        task_candidate_repository=get_task_candidate_repository(),
     )
 
 

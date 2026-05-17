@@ -5,6 +5,7 @@ import 'package:start_on/models/dungeon_api_models.dart';
 import 'package:start_on/models/profile_api_models.dart';
 import 'package:start_on/models/quest_api_models.dart';
 import 'package:start_on/models/stats_api_models.dart';
+import 'package:start_on/models/task_intake_api_models.dart';
 import 'package:start_on/pages/add_quest_screen.dart';
 import 'package:start_on/pages/auto_quest_from_gallery_screen.dart';
 import 'package:start_on/pages/dungeon_screen.dart';
@@ -15,11 +16,13 @@ import 'package:start_on/pages/quest_timer_screen.dart';
 import 'package:start_on/pages/ranking_screen.dart';
 import 'package:start_on/pages/record_screen.dart';
 import 'package:start_on/pages/settings_screen.dart';
+import 'package:start_on/pages/task_candidate_review_screen.dart';
 import 'package:start_on/repositories/auth_repository.dart';
 import 'package:start_on/repositories/dungeon_repository.dart';
 import 'package:start_on/repositories/profile_repository.dart';
 import 'package:start_on/repositories/quest_repository.dart';
 import 'package:start_on/repositories/stats_repository.dart';
+import 'package:start_on/repositories/task_intake_repository.dart';
 import 'package:start_on/services/api_client.dart';
 import 'package:start_on/services/quest_timer_background_service.dart';
 import 'package:start_on/storage/app_settings_store.dart';
@@ -46,17 +49,20 @@ class AdFocusApp extends StatelessWidget {
     QuestRepository? questRepository,
     StatsRepository? statsRepository,
     DungeonRepository? dungeonRepository,
+    TaskIntakeRepository? taskIntakeRepository,
   }) : _authRepository = authRepository,
        _profileRepository = profileRepository,
        _questRepository = questRepository,
        _statsRepository = statsRepository,
-       _dungeonRepository = dungeonRepository;
+       _dungeonRepository = dungeonRepository,
+       _taskIntakeRepository = taskIntakeRepository;
 
   final AuthRepository? _authRepository;
   final ProfileRepository? _profileRepository;
   final QuestRepository? _questRepository;
   final StatsRepository? _statsRepository;
   final DungeonRepository? _dungeonRepository;
+  final TaskIntakeRepository? _taskIntakeRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -80,6 +86,7 @@ class AdFocusApp extends StatelessWidget {
           questRepository: _questRepository,
           statsRepository: _statsRepository,
           dungeonRepository: _dungeonRepository,
+          taskIntakeRepository: _taskIntakeRepository,
         ),
       ),
     );
@@ -93,6 +100,7 @@ class _AuthGate extends StatefulWidget {
     this.questRepository,
     this.statsRepository,
     this.dungeonRepository,
+    this.taskIntakeRepository,
   });
 
   final AuthRepository? authRepository;
@@ -100,6 +108,7 @@ class _AuthGate extends StatefulWidget {
   final QuestRepository? questRepository;
   final StatsRepository? statsRepository;
   final DungeonRepository? dungeonRepository;
+  final TaskIntakeRepository? taskIntakeRepository;
 
   @override
   State<_AuthGate> createState() => _AuthGateState();
@@ -158,6 +167,7 @@ class _AuthGateState extends State<_AuthGate> {
       questRepository: widget.questRepository,
       statsRepository: widget.statsRepository,
       dungeonRepository: widget.dungeonRepository,
+      taskIntakeRepository: widget.taskIntakeRepository,
     );
   }
 
@@ -245,6 +255,7 @@ class AdFocusShell extends StatefulWidget {
     this.questRepository,
     this.statsRepository,
     this.dungeonRepository,
+    this.taskIntakeRepository,
     super.key,
   });
 
@@ -254,6 +265,7 @@ class AdFocusShell extends StatefulWidget {
   final QuestRepository? questRepository;
   final StatsRepository? statsRepository;
   final DungeonRepository? dungeonRepository;
+  final TaskIntakeRepository? taskIntakeRepository;
 
   @override
   State<AdFocusShell> createState() => _AdFocusShellState();
@@ -271,14 +283,18 @@ class _AdFocusShellState extends State<AdFocusShell>
   late final QuestRepository? _questRepository;
   late final StatsRepository? _statsRepository;
   late final DungeonRepository? _dungeonRepository;
+  late final TaskIntakeRepository? _taskIntakeRepository;
   late final bool _usesServerData;
   late final bool _ownsProfileRepository;
   late final bool _ownsQuestRepository;
   late final bool _ownsStatsRepository;
   late final bool _ownsDungeonRepository;
+  late final bool _ownsTaskIntakeRepository;
   int _currentIndex = 0;
   int _celebrationSeed = 0;
   bool _isLoading = true;
+  bool _isCreatingAiQuest = false;
+  bool _isSavingAiQuest = false;
   bool _isOpeningQuestTimer = false;
   bool _isQuestTimerRouteOpen = false;
   bool _isQuestTimerBottomSheetOpen = false;
@@ -333,12 +349,17 @@ class _AdFocusShellState extends State<AdFocusShell>
     _dungeonRepository = _usesServerData
         ? widget.dungeonRepository ?? DungeonRepository()
         : null;
+    _taskIntakeRepository = _usesServerData
+        ? widget.taskIntakeRepository ?? TaskIntakeRepository()
+        : null;
     _ownsProfileRepository =
         _usesServerData && widget.profileRepository == null;
     _ownsQuestRepository = _usesServerData && widget.questRepository == null;
     _ownsStatsRepository = _usesServerData && widget.statsRepository == null;
     _ownsDungeonRepository =
         _usesServerData && widget.dungeonRepository == null;
+    _ownsTaskIntakeRepository =
+        _usesServerData && widget.taskIntakeRepository == null;
     _listenToQuestTimerTicks();
     unawaited(_initializeAppState());
   }
@@ -360,6 +381,9 @@ class _AdFocusShellState extends State<AdFocusShell>
     if (_ownsDungeonRepository) {
       _dungeonRepository?.close();
     }
+    if (_ownsTaskIntakeRepository) {
+      _taskIntakeRepository?.close();
+    }
     super.dispose();
   }
 
@@ -370,11 +394,28 @@ class _AdFocusShellState extends State<AdFocusShell>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
+      final loadingMessage = _usesServerData
+          ? '서버 데이터 불러오는 중...'
+          : '앱 데이터 불러오는 중...';
       return Scaffold(
         body: Container(
           decoration: const BoxDecoration(color: Color(0xFFF1F3F8)),
-          child: const Center(
-            child: CircularProgressIndicator(color: Color(0xFF6F63FF)),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(color: Color(0xFF6F63FF)),
+                const SizedBox(height: 16),
+                Text(
+                  loadingMessage,
+                  style: const TextStyle(
+                    color: Color(0xFF495063),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -397,6 +438,8 @@ class _AdFocusShellState extends State<AdFocusShell>
       RecordScreen(data: _localData),
     ];
 
+    final isAiQuestBusy = _isCreatingAiQuest || _isSavingAiQuest;
+
     return Scaffold(
       key: _scaffoldKey,
       extendBody: true,
@@ -418,6 +461,8 @@ class _AdFocusShellState extends State<AdFocusShell>
                 onComplete: _hideQuestCelebration,
               ),
             ),
+          if (_isCreatingAiQuest) _buildAiQuestCreationOverlay(),
+          if (_isSavingAiQuest) const _AiQuestSavingShimmerOverlay(),
         ],
       ),
       floatingActionButtonLocation: const _BottomNavCenterFabLocation(),
@@ -431,7 +476,7 @@ class _AdFocusShellState extends State<AdFocusShell>
             width: 56,
             height: 42,
             child: FloatingActionButton(
-              onPressed: _openAddQuest,
+              onPressed: isAiQuestBusy ? null : _openAddQuest,
               backgroundColor: const Color(0xFFD0CBFF),
               foregroundColor: const Color(0xFF6358FF),
               elevation: 0,
@@ -443,11 +488,18 @@ class _AdFocusShellState extends State<AdFocusShell>
           ),
         ),
       ),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+      bottomNavigationBar: AbsorbPointer(
+        absorbing: isAiQuestBusy,
+        child: AppBottomNavBar(
+          currentIndex: _currentIndex,
+          onTap: (index) => setState(() => _currentIndex = index),
+        ),
       ),
     );
+  }
+
+  Widget _buildAiQuestCreationOverlay() {
+    return const _AiQuestCreationProgressOverlay();
   }
 
   void _changeTab(int index) {
@@ -480,7 +532,7 @@ class _AdFocusShellState extends State<AdFocusShell>
       return;
     }
 
-    final createdQuest = await _createQuest(quest);
+    final createdQuest = await _createQuestFromDraft(quest);
     if (!mounted || createdQuest == null) {
       return;
     }
@@ -488,6 +540,256 @@ class _AdFocusShellState extends State<AdFocusShell>
     _setLocalData(
       _localData.copyWith(quests: [createdQuest, ..._localData.quests]),
     );
+  }
+
+  Future<QuestItem?> _createQuestFromDraft(QuestItem draft) async {
+    if (draft.subtasks.isNotEmpty) {
+      return draft.copyWith(
+        activeSubtaskId: draft.effectiveActiveSubtaskId,
+        syncTarget: questSyncTargetLocal,
+      );
+    }
+
+    final taskIntakeRepository = _taskIntakeRepository;
+    if (taskIntakeRepository == null) {
+      return _createQuest(draft);
+    }
+
+    if (mounted) {
+      setState(() => _isCreatingAiQuest = true);
+    }
+
+    final TaskCandidateResponse? candidate;
+    try {
+      candidate = await _createTaskCandidate(
+        draft,
+        repository: taskIntakeRepository,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isCreatingAiQuest = false);
+      }
+    }
+
+    if (!mounted || candidate == null) {
+      return null;
+    }
+
+    return _reviewAndCommitCandidate(
+      candidate,
+      draft: draft,
+      repository: taskIntakeRepository,
+    );
+  }
+
+  Future<TaskCandidateResponse?> _createTaskCandidate(
+    QuestItem draft, {
+    required TaskIntakeRepository repository,
+  }) async {
+    try {
+      final response = await repository.createIntake(
+        TaskIntakeRequest(
+          text: _taskIntakeTextFromDraft(draft),
+          source: 'manual',
+          clientTimezone: 'Asia/Seoul',
+          clientMetadata: _taskIntakeMetadataFromDraft(draft),
+        ),
+      );
+
+      final candidate = response.candidate;
+      if (candidate != null) {
+        return candidate;
+      }
+
+      final candidateId = response.candidateId;
+      if (candidateId != null) {
+        return repository.getCandidate(candidateId);
+      }
+
+      throw const TaskIntakeRepositoryException(
+        code: 'missing_task_candidate',
+        message: 'Server response did not include a task candidate.',
+      );
+    } catch (error) {
+      _showQuestSyncError('AI 제안을 만들지 못했어요.', error);
+      return null;
+    }
+  }
+
+  Map<String, dynamic> _taskIntakeMetadataFromDraft(QuestItem draft) {
+    return {
+      'entry_point': 'add_quest_screen',
+      'category': normalizeQuestCategory(draft.category),
+      'difficulty': draft.difficulty,
+      'due_date': draft.dueDate?.toIso8601String(),
+      'exp': draft.exp,
+      'default_duration_seconds': draft.defaultDurationSeconds,
+      if (draft.aiSubtaskPrompt != null)
+        'subtask_generation_prompt': draft.aiSubtaskPrompt,
+    };
+  }
+
+  String _taskIntakeTextFromDraft(QuestItem draft) {
+    final prompt = draft.aiSubtaskPrompt?.trim();
+    if (prompt == null || prompt.isEmpty) {
+      return draft.title;
+    }
+    return '${draft.title}\n\nSubtask request: $prompt';
+  }
+
+  Future<QuestItem?> _reviewAndCommitCandidate(
+    TaskCandidateResponse initialCandidate, {
+    required QuestItem draft,
+    required TaskIntakeRepository repository,
+  }) async {
+    var candidate = initialCandidate;
+
+    while (true) {
+      if (!mounted) {
+        return null;
+      }
+
+      final navigator = Navigator.of(context);
+      final result = await navigator.push<TaskCandidateReviewResult>(
+        MaterialPageRoute<TaskCandidateReviewResult>(
+          builder: (_) => TaskCandidateReviewScreen(candidate: candidate),
+        ),
+      );
+
+      if (!mounted || result == null) {
+        return null;
+      }
+
+      switch (result.action) {
+        case TaskCandidateReviewAction.saveAsIs:
+          return _confirmCandidate(
+            candidate,
+            result: result,
+            draft: draft,
+            repository: repository,
+          );
+        case TaskCandidateReviewAction.saveTodayOnly:
+          return _confirmCandidate(
+            candidate,
+            result: result,
+            draft: draft,
+            repository: repository,
+            todayOnly: true,
+          );
+        case TaskCandidateReviewAction.makeSmaller:
+          final revised = await _reviseCandidate(
+            result,
+            repository: repository,
+            revisionType: 'make_smaller',
+          );
+          if (revised == null) {
+            return null;
+          }
+          candidate = revised;
+          continue;
+        case TaskCandidateReviewAction.reduceReminders:
+          final revised = await _reviseCandidate(
+            result,
+            repository: repository,
+            revisionType: 'adjust_reminders',
+          );
+          if (revised == null) {
+            return null;
+          }
+          candidate = revised;
+          continue;
+        case TaskCandidateReviewAction.cancel:
+          await _rejectCandidate(result, repository: repository);
+          return null;
+      }
+    }
+  }
+
+  Future<QuestItem?> _confirmCandidate(
+    TaskCandidateResponse candidate, {
+    required TaskCandidateReviewResult result,
+    required QuestItem draft,
+    required TaskIntakeRepository repository,
+    bool todayOnly = false,
+  }) async {
+    try {
+      if (mounted) {
+        setState(() => _isSavingAiQuest = true);
+      }
+
+      final commitResult = await repository.confirmCandidate(
+        result.candidateId,
+        TaskConfirmRequest(
+          editedFields: result.editedFields,
+          selectedSubtaskIds: todayOnly
+              ? _todayOnlySubtaskIds(candidate, result.selectedSubtaskIds)
+              : result.selectedSubtaskIds,
+          selectedReminderIds: result.selectedReminderIds,
+        ),
+      );
+      return _questFromCommittedTask(commitResult.task, fallbackDraft: draft);
+    } catch (error) {
+      _showQuestSyncError('AI 제안을 저장하지 못했어요.', error);
+      return null;
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingAiQuest = false);
+      }
+    }
+  }
+
+  Future<TaskCandidateResponse?> _reviseCandidate(
+    TaskCandidateReviewResult result, {
+    required TaskIntakeRepository repository,
+    required String revisionType,
+  }) async {
+    try {
+      return repository.reviseCandidate(
+        result.candidateId,
+        TaskCandidateReviseRequest(
+          revisionType: revisionType,
+          editedFields: result.editedFields,
+        ),
+      );
+    } catch (error) {
+      _showQuestSyncError('AI 제안을 다시 만들지 못했어요.', error);
+      return null;
+    }
+  }
+
+  Future<void> _rejectCandidate(
+    TaskCandidateReviewResult result, {
+    required TaskIntakeRepository repository,
+  }) async {
+    try {
+      await repository.rejectCandidate(
+        result.candidateId,
+        const TaskCandidateRejectRequest(reason: 'cancelled_from_review'),
+      );
+    } catch (error) {
+      _showQuestSyncError('AI 제안을 취소하지 못했어요.', error);
+    }
+  }
+
+  List<String> _todayOnlySubtaskIds(
+    TaskCandidateResponse candidate,
+    List<String> selectedSubtaskIds,
+  ) {
+    final selectedIds = selectedSubtaskIds.toSet();
+    final selectedSubtasks = candidate.subtasks
+        .where((subtask) => selectedIds.contains(subtask.id))
+        .toList();
+
+    for (final subtask in selectedSubtasks) {
+      if (subtask.isNextAction) {
+        return [subtask.id];
+      }
+    }
+
+    if (selectedSubtasks.isNotEmpty) {
+      return [selectedSubtasks.first.id];
+    }
+    return <String>[];
   }
 
   Future<void> _openQuestTimer(QuestItem quest) async {
@@ -499,6 +801,8 @@ class _AdFocusShellState extends State<AdFocusShell>
           quest: quest,
           userLevel: _localData.level,
           notificationsEnabled: _notificationsEnabled,
+          onQuestChanged: (updatedQuest) =>
+              _updateQuest(updatedQuest, syncServer: false),
         ),
       ),
     );
@@ -590,7 +894,7 @@ class _AdFocusShellState extends State<AdFocusShell>
     await _stopQuestTimerIfActive(quest.id);
 
     final questRepository = _questRepository;
-    if (questRepository != null) {
+    if (questRepository != null && quest.syncsWithQuestApi) {
       try {
         await questRepository.deleteQuest(quest.id);
       } catch (error) {
@@ -728,6 +1032,7 @@ class _AdFocusShellState extends State<AdFocusShell>
 
     _isQuestTimerBottomSheetOpen = true;
     QuestItem? fullTimerQuest;
+    CompletedQuestRecord? completedRecord;
 
     late final PersistentBottomSheetController controller;
     controller = scaffoldState.showBottomSheet(
@@ -741,6 +1046,10 @@ class _AdFocusShellState extends State<AdFocusShell>
               _updateQuest(updatedQuest, syncServer: false, persist: false),
           onOpenFullTimer: (updatedQuest) {
             fullTimerQuest = updatedQuest;
+            controller.close();
+          },
+          onQuestCompleted: (record) {
+            completedRecord = record;
             controller.close();
           },
           onClose: () => controller.close(),
@@ -767,6 +1076,12 @@ class _AdFocusShellState extends State<AdFocusShell>
     _isQuestTimerBottomSheetOpen = false;
     if (identical(_questTimerBottomSheetController, controller)) {
       _questTimerBottomSheetController = null;
+    }
+
+    final completedQuestRecord = completedRecord;
+    if (completedQuestRecord != null) {
+      await _handleQuestTimerResult(completedQuestRecord);
+      return;
     }
 
     final questForFullTimer = fullTimerQuest;
@@ -1033,7 +1348,9 @@ class _AdFocusShellState extends State<AdFocusShell>
       await _store.save(data);
       return data;
     } catch (error) {
-      _scheduleQuestSyncError('서버 초기 데이터를 불러오지 못해 저장된 데이터를 표시합니다.', error);
+      if (!_isLoading) {
+        _scheduleQuestSyncError('서버 초기 데이터를 불러오지 못해 저장된 데이터를 표시합니다.', error);
+      }
       return fallbackData;
     }
   }
@@ -1067,12 +1384,28 @@ class _AdFocusShellState extends State<AdFocusShell>
       orderStat: stats.orderStat,
       intelligenceStat: stats.intelligenceStat,
       healthStat: stats.healthStat,
-      quests: quests.map(QuestItem.fromApiResponse).toList(),
+      quests: _mergeServerQuestsWithLocalOnlyItems(
+        serverQuests: quests.map(QuestItem.fromApiResponse).toList(),
+        localQuests: data.quests,
+      ),
       clearedDungeonIds: dungeonList.dungeons
           .where((dungeon) => dungeon.cleared)
           .map((dungeon) => dungeon.dungeonId)
           .toList(),
     );
+  }
+
+  List<QuestItem> _mergeServerQuestsWithLocalOnlyItems({
+    required List<QuestItem> serverQuests,
+    required List<QuestItem> localQuests,
+  }) {
+    final serverIds = serverQuests.map((quest) => quest.id).toSet();
+    final localOnlyQuests = localQuests
+        .where(
+          (quest) => !quest.syncsWithQuestApi && !serverIds.contains(quest.id),
+        )
+        .toList();
+    return [...serverQuests, ...localOnlyQuests];
   }
 
   Future<QuestItem?> _createQuest(QuestItem quest) async {
@@ -1113,9 +1446,129 @@ class _AdFocusShellState extends State<AdFocusShell>
     return createdQuests;
   }
 
+  QuestItem _questFromCommittedTask(
+    TaskResponse task, {
+    required QuestItem fallbackDraft,
+  }) {
+    final difficulty = _questDifficultyFromTask(task.difficulty);
+    final category = _metadataString(task.metadata, 'category');
+
+    return QuestItem(
+      id: task.id,
+      title: task.title,
+      exp: expForDifficulty(difficulty),
+      difficulty: difficulty,
+      category: normalizeQuestCategory(category ?? fallbackDraft.category),
+      elapsedSeconds: 0,
+      defaultDurationSeconds: _taskDurationSeconds(
+        task,
+        difficulty: difficulty,
+        fallbackDraft: fallbackDraft,
+      ),
+      dueDate: normalizeQuestDueDate(task.dueAt ?? fallbackDraft.dueDate),
+      subtasks: _questSubtasksFromTask(task.subtasks),
+      activeSubtaskId: _firstIncompleteTaskSubtaskId(task.subtasks),
+      syncTarget: questSyncTargetTask,
+    );
+  }
+
+  List<QuestSubtask> _questSubtasksFromTask(List<SubtaskResponse> subtasks) {
+    final sortedSubtasks = [...subtasks]
+      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+
+    return sortedSubtasks
+        .map(
+          (subtask) => QuestSubtask(
+            id: subtask.id,
+            title: subtask.title,
+            orderIndex: subtask.orderIndex,
+            estimatedMinutes: subtask.estimatedMinutes,
+            status: subtask.status,
+            isNextAction: subtask.isNextAction,
+            energyRequired: subtask.energyRequired,
+            completedAt: subtask.completedAt,
+            elapsedSeconds: subtask.status == 'done'
+                ? _taskSubtaskDurationSeconds(subtask)
+                : 0,
+          ),
+        )
+        .toList();
+  }
+
+  int _taskSubtaskDurationSeconds(SubtaskResponse subtask) {
+    final estimatedMinutes = subtask.estimatedMinutes;
+    if (estimatedMinutes == null || estimatedMinutes <= 0) {
+      return 60;
+    }
+    return estimatedMinutes * 60;
+  }
+
+  String? _firstIncompleteTaskSubtaskId(List<SubtaskResponse> subtasks) {
+    final sortedSubtasks = [...subtasks]
+      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+
+    for (final subtask in sortedSubtasks) {
+      if (subtask.status != 'done') {
+        return subtask.id;
+      }
+    }
+    return null;
+  }
+
+  String _questDifficultyFromTask(String? difficulty) {
+    return switch (difficulty) {
+      'low' || 'easy' || '쉬움' => '쉬움',
+      'high' || 'hard' || '어려움' => '어려움',
+      _ => '보통',
+    };
+  }
+
+  int _taskDurationSeconds(
+    TaskResponse task, {
+    required String difficulty,
+    required QuestItem fallbackDraft,
+  }) {
+    final estimatedMinutes = task.estimatedMinutes;
+    if (estimatedMinutes != null && estimatedMinutes > 0) {
+      return estimatedMinutes * 60;
+    }
+
+    final metadataDuration = _metadataInt(
+      task.metadata,
+      'default_duration_seconds',
+    );
+    if (metadataDuration != null && metadataDuration > 0) {
+      return metadataDuration;
+    }
+
+    if (fallbackDraft.defaultDurationSeconds > 0) {
+      return fallbackDraft.defaultDurationSeconds;
+    }
+    return defaultQuestDurationSecondsForDifficulty(difficulty);
+  }
+
+  String? _metadataString(Map<String, dynamic> metadata, String key) {
+    final value = metadata[key];
+    if (value is String && value.trim().isNotEmpty) {
+      return value;
+    }
+    return null;
+  }
+
+  int? _metadataInt(Map<String, dynamic> metadata, String key) {
+    final value = metadata[key];
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
+    }
+    return null;
+  }
+
   Future<void> _syncQuestUpdate(QuestItem quest) async {
     final questRepository = _questRepository;
-    if (questRepository == null) {
+    if (questRepository == null || !quest.syncsWithQuestApi) {
       return;
     }
 
@@ -1139,7 +1592,8 @@ class _AdFocusShellState extends State<AdFocusShell>
     CompletedQuestRecord completedRecord,
   ) async {
     final questRepository = _questRepository;
-    if (questRepository == null) {
+    final quest = _findQuest(completedRecord.questId);
+    if (questRepository == null || quest?.syncsWithQuestApi != true) {
       return completedRecord;
     }
 
@@ -1238,5 +1692,272 @@ class _AdFocusShellState extends State<AdFocusShell>
       return;
     }
     setState(() => _showQuestCelebration = false);
+  }
+}
+
+class _AiQuestCreationProgressOverlay extends StatefulWidget {
+  const _AiQuestCreationProgressOverlay();
+
+  @override
+  State<_AiQuestCreationProgressOverlay> createState() =>
+      _AiQuestCreationProgressOverlayState();
+}
+
+class _AiQuestCreationProgressOverlayState
+    extends State<_AiQuestCreationProgressOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _progressController = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 18),
+  )..forward();
+
+  @override
+  void dispose() {
+    _progressController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: AbsorbPointer(
+        child: Container(
+          color: const Color(0x66171B2A),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x24171B2A),
+                  blurRadius: 28,
+                  offset: Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+              child: AnimatedBuilder(
+                animation: _progressController,
+                builder: (context, child) {
+                  final progress =
+                      Curves.easeOutCubic.transform(_progressController.value) *
+                      0.9;
+                  final percent = (progress * 100).round().clamp(1, 90);
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'AI 퀘스트 생성 중...',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF252B3A),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'AI 제안 페이지를 준비하고 있어요.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF7E899D),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 8,
+                          color: const Color(0xFF6F63FF),
+                          backgroundColor: const Color(0xFFE5E9F2),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '$percent%',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          color: Color(0xFF6F63FF),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AiQuestSavingShimmerOverlay extends StatefulWidget {
+  const _AiQuestSavingShimmerOverlay();
+
+  @override
+  State<_AiQuestSavingShimmerOverlay> createState() =>
+      _AiQuestSavingShimmerOverlayState();
+}
+
+class _AiQuestSavingShimmerOverlayState
+    extends State<_AiQuestSavingShimmerOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmerController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: AbsorbPointer(
+        child: Container(
+          color: const Color(0x66171B2A),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x24171B2A),
+                  blurRadius: 28,
+                  offset: Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'AI 퀘스트 저장 중...',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF252B3A),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  _ShimmerBlock(
+                    animation: _shimmerController,
+                    height: 16,
+                    widthFactor: 0.74,
+                    borderRadius: 999,
+                  ),
+                  const SizedBox(height: 12),
+                  _ShimmerBlock(
+                    animation: _shimmerController,
+                    height: 12,
+                    widthFactor: 1,
+                    borderRadius: 999,
+                  ),
+                  const SizedBox(height: 8),
+                  _ShimmerBlock(
+                    animation: _shimmerController,
+                    height: 12,
+                    widthFactor: 0.86,
+                    borderRadius: 999,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ShimmerBlock(
+                          animation: _shimmerController,
+                          height: 34,
+                          widthFactor: 1,
+                          borderRadius: 12,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _ShimmerBlock(
+                          animation: _shimmerController,
+                          height: 34,
+                          widthFactor: 1,
+                          borderRadius: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ShimmerBlock extends StatelessWidget {
+  const _ShimmerBlock({
+    required this.animation,
+    required this.height,
+    required this.widthFactor,
+    required this.borderRadius,
+  });
+
+  final Animation<double> animation;
+  final double height;
+  final double widthFactor;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    return FractionallySizedBox(
+      widthFactor: widthFactor,
+      alignment: Alignment.centerLeft,
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) {
+          final offset = -1.4 + (animation.value * 2.8);
+          return ShaderMask(
+            blendMode: BlendMode.srcATop,
+            shaderCallback: (bounds) {
+              return LinearGradient(
+                begin: Alignment(offset, -0.6),
+                end: Alignment(offset + 1.2, 0.6),
+                colors: const [
+                  Color(0xFFE5E9F2),
+                  Color(0xFFF8FAFF),
+                  Color(0xFFE5E9F2),
+                ],
+                stops: const [0.24, 0.5, 0.76],
+              ).createShader(bounds);
+            },
+            child: child,
+          );
+        },
+        child: Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE5E9F2),
+            borderRadius: BorderRadius.circular(borderRadius),
+          ),
+        ),
+      ),
+    );
   }
 }

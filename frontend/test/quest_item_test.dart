@@ -24,6 +24,8 @@ void main() {
     expect(quest.elapsedSeconds, 120);
     expect(quest.defaultDurationSeconds, 2700);
     expect(quest.dueDate, isNull);
+    expect(quest.syncTarget, questSyncTargetQuest);
+    expect(quest.syncsWithQuestApi, isTrue);
   });
 
   test('toCreateRequest maps screen model fields to server request fields', () {
@@ -84,5 +86,115 @@ void main() {
 
     expect(quest.difficulty, '보통');
     expect(quest.defaultDurationSeconds, 45 * 60);
+    expect(quest.syncTarget, questSyncTargetLocal);
+    expect(quest.syncsWithQuestApi, isFalse);
+  });
+
+  test('json preserves task sync target', () {
+    final quest = QuestItem(
+      id: 'task-1',
+      title: 'AI 태스크',
+      exp: 100,
+      difficulty: '어려움',
+      category: 'study',
+      elapsedSeconds: 0,
+      defaultDurationSeconds: 5400,
+      activeSubtaskId: 'task-subtask-1',
+      subtasks: [
+        QuestSubtask(
+          id: 'task-subtask-1',
+          title: '자료 열기',
+          orderIndex: 0,
+          estimatedMinutes: 5,
+          status: 'done',
+          isNextAction: true,
+          energyRequired: 'low',
+          completedAt: DateTime(2026, 5, 16, 10, 30),
+          elapsedSeconds: 300,
+        ),
+      ],
+      syncTarget: questSyncTargetTask,
+    );
+
+    final decoded = QuestItem.fromJson(quest.toJson());
+
+    expect(decoded.syncTarget, questSyncTargetTask);
+    expect(decoded.isTaskBacked, isTrue);
+    expect(decoded.syncsWithQuestApi, isFalse);
+    expect(decoded.activeSubtaskId, 'task-subtask-1');
+    expect(decoded.effectiveDurationSeconds, 300);
+    expect(decoded.effectiveActiveSubtaskId, isNull);
+    expect(decoded.subtasks, hasLength(1));
+    expect(decoded.subtasks.single.id, 'task-subtask-1');
+    expect(decoded.subtasks.single.title, '자료 열기');
+    expect(decoded.subtasks.single.orderIndex, 0);
+    expect(decoded.subtasks.single.estimatedMinutes, 5);
+    expect(decoded.subtasks.single.status, 'done');
+    expect(decoded.subtasks.single.isDone, isTrue);
+    expect(decoded.subtasks.single.isNextAction, isTrue);
+    expect(decoded.subtasks.single.energyRequired, 'low');
+    expect(decoded.subtasks.single.completedAt, DateTime(2026, 5, 16, 10, 30));
+    expect(decoded.subtasks.single.elapsedSeconds, 300);
+    expect(decoded.subtasks.single.plannedDurationSeconds, 300);
+  });
+
+  test('QuestSubtask copyWith can toggle completion locally', () {
+    const subtask = QuestSubtask(
+      id: 'task-subtask-1',
+      title: '자료 열기',
+      orderIndex: 0,
+      status: 'todo',
+    );
+    final completedAt = DateTime(2026, 5, 16, 11);
+
+    final done = subtask.copyWith(
+      status: 'done',
+      completedAt: completedAt,
+      elapsedSeconds: 60,
+    );
+    final reopened = done.copyWith(
+      status: 'todo',
+      completedAt: null,
+      elapsedSeconds: 0,
+    );
+
+    expect(done.isDone, isTrue);
+    expect(done.completedAt, completedAt);
+    expect(done.elapsedSeconds, 60);
+    expect(reopened.isDone, isFalse);
+    expect(reopened.completedAt, isNull);
+    expect(reopened.elapsedSeconds, 0);
+  });
+
+  test('effective active subtask uses first incomplete task', () {
+    final quest = QuestItem(
+      id: 'task-1',
+      title: 'AI 태스크',
+      exp: 100,
+      difficulty: '보통',
+      category: 'study',
+      elapsedSeconds: 60,
+      defaultDurationSeconds: 1800,
+      activeSubtaskId: 'done-subtask',
+      subtasks: [
+        const QuestSubtask(
+          id: 'done-subtask',
+          title: '완료된 단계',
+          orderIndex: 0,
+          estimatedMinutes: 1,
+          status: 'done',
+          elapsedSeconds: 60,
+        ),
+        const QuestSubtask(
+          id: 'next-subtask',
+          title: '다음 단계',
+          orderIndex: 1,
+          estimatedMinutes: 2,
+        ),
+      ],
+    );
+
+    expect(quest.effectiveDurationSeconds, 180);
+    expect(quest.effectiveActiveSubtaskId, 'next-subtask');
   });
 }

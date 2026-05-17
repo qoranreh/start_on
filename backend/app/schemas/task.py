@@ -86,12 +86,12 @@ class TaskCreateFromCandidateRequest(BaseModel):
         default_factory=dict,
         description="User edits to apply before committing the candidate.",
     )
-    selected_subtask_ids: list[UUID] = Field(
-        default_factory=list,
+    selected_subtask_ids: list[UUID] | None = Field(
+        default=None,
         description="Candidate subtasks selected for final commit.",
     )
-    selected_reminder_ids: list[UUID] = Field(
-        default_factory=list,
+    selected_reminder_ids: list[UUID] | None = Field(
+        default=None,
         description="Candidate reminders selected for final commit.",
     )
 
@@ -101,3 +101,8 @@ class TaskConfirmRequest(TaskCreateFromCandidateRequest):
         default=True,
         description="Whether the user accepted the candidate for final task creation.",
     )
+
+
+class TaskCommitResult(BaseModel):
+    candidate_id: UUID = Field(..., description="Committed task candidate id.")
+    task: TaskResponse = Field(..., description="Final task created from the candidate.")

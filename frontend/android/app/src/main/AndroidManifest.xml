@@ -8,7 +8,8 @@
     <application
         android:label="Start On"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <service
             android:name="id.flutter.flutter_background_service.BackgroundService"
             android:exported="true"

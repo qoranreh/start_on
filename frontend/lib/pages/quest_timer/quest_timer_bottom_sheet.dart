@@ -16,6 +16,7 @@ class QuestTimerBottomSheet extends StatefulWidget {
     required this.notificationsEnabled,
     required this.onQuestChanged,
     required this.onOpenFullTimer,
+    required this.onQuestCompleted,
     required this.onClose,
   });
 
@@ -23,6 +24,7 @@ class QuestTimerBottomSheet extends StatefulWidget {
   final bool notificationsEnabled;
   final ValueChanged<QuestItem> onQuestChanged;
   final ValueChanged<QuestItem> onOpenFullTimer;
+  final ValueChanged<CompletedQuestRecord> onQuestCompleted;
   final VoidCallback onClose;
 
   @override
@@ -43,7 +45,7 @@ class _QuestTimerBottomSheetState extends State<QuestTimerBottomSheet> {
   bool _hasStarted = false;
   bool _running = false;
 
-  int get _durationSeconds => widget.quest.defaultDurationSeconds;
+  int get _durationSeconds => widget.quest.effectiveDurationSeconds;
 
   @override
   void initState() {
@@ -239,7 +241,7 @@ class _QuestTimerBottomSheetState extends State<QuestTimerBottomSheet> {
                             fillColor: const Color(0xFF8177FF),
                             backgroundColor: Colors.transparent,
                             isTimerTextShown: false,
-                            onComplete: _pauseTimer,
+                            onComplete: _completeQuest,
                           ),
                           Text(
                             _formatDuration(Duration(seconds: _elapsedSeconds)),
@@ -282,7 +284,7 @@ class _QuestTimerBottomSheetState extends State<QuestTimerBottomSheet> {
   }
 
   void _openFullTimer() {
-    final updatedQuest = widget.quest.copyWith(elapsedSeconds: _elapsedSeconds);
+    final updatedQuest = _questWithElapsed(_elapsedSeconds);
     widget.onQuestChanged(updatedQuest);
     widget.onOpenFullTimer(updatedQuest);
   }
@@ -365,7 +367,7 @@ class _QuestTimerBottomSheetState extends State<QuestTimerBottomSheet> {
       _notifyQuestChanged();
 
       if (nextElapsedSeconds >= _durationSeconds) {
-        unawaited(_pauseTimer());
+        unawaited(_completeQuest());
       }
     });
   }
@@ -391,9 +393,70 @@ class _QuestTimerBottomSheetState extends State<QuestTimerBottomSheet> {
   }
 
   void _notifyQuestChanged() {
-    widget.onQuestChanged(
-      widget.quest.copyWith(elapsedSeconds: _elapsedSeconds),
+    widget.onQuestChanged(_questWithElapsed(_elapsedSeconds));
+  }
+
+  Future<void> _completeQuest() async {
+    final completedQuest = _questWithElapsed(_durationSeconds);
+    _elapsedSeconds = completedQuest.elapsedSeconds;
+
+    _stopLocalTicker();
+    if (widget.notificationsEnabled) {
+      await _questTimerService.stopTimer();
+    }
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => _running = false);
+    widget.onQuestCompleted(
+      CompletedQuestRecord(
+        questId: completedQuest.id,
+        title: completedQuest.title,
+        difficulty: completedQuest.difficulty,
+        category: completedQuest.category,
+        earnedExp: _elapsedSeconds ~/ 60,
+        completedAt: DateTime.now().toIso8601String(),
+        elapsedSeconds: _elapsedSeconds,
+        subtasks: completedQuest.subtasks,
+      ),
     );
+  }
+
+  QuestItem _questWithElapsed(int elapsedSeconds) {
+    final clampedElapsedSeconds = elapsedSeconds.clamp(0, _durationSeconds);
+    if (widget.quest.subtasks.isEmpty) {
+      return widget.quest.copyWith(elapsedSeconds: clampedElapsedSeconds);
+    }
+
+    var remainingSeconds = clampedElapsedSeconds;
+    final completedAt = DateTime.now();
+    final subtasks = widget.quest.subtasks.map((subtask) {
+      final plannedDurationSeconds = subtask.plannedDurationSeconds;
+      final appliedSeconds = remainingSeconds.clamp(0, plannedDurationSeconds);
+      remainingSeconds -= appliedSeconds;
+      final isDone = appliedSeconds >= plannedDurationSeconds;
+      return subtask.copyWith(
+        status: isDone ? 'done' : 'todo',
+        completedAt: isDone ? subtask.completedAt ?? completedAt : null,
+        elapsedSeconds: appliedSeconds,
+      );
+    }).toList();
+
+    return widget.quest.copyWith(
+      elapsedSeconds: clampedElapsedSeconds,
+      subtasks: subtasks,
+      activeSubtaskId: _firstIncompleteSubtaskId(subtasks),
+    );
+  }
+
+  String? _firstIncompleteSubtaskId(List<QuestSubtask> subtasks) {
+    for (final subtask in subtasks) {
+      if (!subtask.isDone) {
+        return subtask.id;
+      }
+    }
+    return null;
   }
 
   String _formatDuration(Duration duration) {

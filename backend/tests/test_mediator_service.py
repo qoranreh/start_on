@@ -4,6 +4,7 @@ from typing import Any
 from app.providers.gemini_provider import GeminiMediatorResult
 from app.repositories.mediator_run_repository import MediatorRunRecord
 from app.repositories.raw_input_repository import RawTaskInputRecord
+from app.repositories.today_context_repository import TodayContextCounts
 from app.schemas.mediator import ADHDReasoning, MediatorOutput, MediatorSubtask
 from app.schemas.task import TaskSource
 from app.schemas.task_candidate import (
@@ -15,7 +16,11 @@ from app.schemas.task_candidate import (
 )
 from app.schemas.task_intake import RawTaskInputStatus
 from app.services.mediator_service import MediatorService
-from app.services.today_planning_service import TodayContext
+from app.services.today_planning_service import (
+    TASK_COUNT_LIMIT_WARNING,
+    TodayContext,
+    TodayPlanningService,
+)
 
 
 USER_ID = "00000000-0000-4000-8000-000000000001"
@@ -133,7 +138,9 @@ def make_candidate_response(output: MediatorOutput) -> TaskCandidateResponse:
         difficulty=output.difficulty,
         next_action=output.next_action,
         recommended_today=bool(output.recommended_today),
-        today_reason="\n".join(output.recommended_today),
+        today_reason="\n".join(output.recommended_today)
+        if output.recommended_today
+        else None,
         overload_warning=output.overload_warning,
         confidence=output.confidence,
         status=TaskCandidateStatus.DRAFT,
@@ -363,6 +370,28 @@ class FakeTodayPlanningService:
         )
 
 
+class FakeTodayContextRepository:
+    def __init__(self, counts: TodayContextCounts) -> None:
+        self.counts = counts
+        self.calls: list[dict[str, object]] = []
+
+    def get_today_context_counts(
+        self,
+        *,
+        user_id: str,
+        day_start: object,
+        day_end: object,
+    ) -> TodayContextCounts:
+        self.calls.append(
+            {
+                "user_id": user_id,
+                "day_start": day_start,
+                "day_end": day_end,
+            }
+        )
+        return self.counts
+
+
 class MediatorServiceTest(unittest.TestCase):
     def make_service(
         self,
@@ -472,6 +501,55 @@ class MediatorServiceTest(unittest.TestCase):
         self.assertEqual(
             [update["status"] for update in raw_input_repository.status_updates],
             ["processing", "candidate_ready"],
+        )
+
+    def test_create_candidate_applies_real_capacity_guard_to_saved_candidate(
+        self,
+    ) -> None:
+        events: list[str] = []
+        raw_input_repository = FakeRawInputRepository(events)
+        mediator_run_repository = FakeMediatorRunRepository(events)
+        task_candidate_repository = FakeTaskCandidateRepository(events)
+        gemini_provider = FakeGeminiProvider(events)
+        today_context_repository = FakeTodayContextRepository(
+            TodayContextCounts(
+                today_task_count=3,
+                today_estimated_minutes=30,
+                today_reminder_count=1,
+            )
+        )
+        service = MediatorService(
+            raw_input_repository=raw_input_repository,
+            mediator_run_repository=mediator_run_repository,
+            task_candidate_repository=task_candidate_repository,
+            gemini_provider=gemini_provider,
+            today_planning_service=TodayPlanningService(today_context_repository),
+        )
+
+        candidate = service.create_candidate(
+            user_id=USER_ID,
+            raw_input_id=RAW_INPUT_ID,
+            client_timezone="Asia/Seoul",
+            user_context={"energy_now": "medium"},
+        )
+
+        self.assertEqual(len(today_context_repository.calls), 1)
+        self.assertEqual(today_context_repository.calls[0]["user_id"], USER_ID)
+
+        create_call = task_candidate_repository.create_calls[0]
+        guarded_output = create_call["output"]
+        self.assertEqual(guarded_output.recommended_today, [])
+        self.assertEqual(guarded_output.overload_warning, TASK_COUNT_LIMIT_WARNING)
+
+        self.assertFalse(candidate.recommended_today)
+        self.assertIsNone(candidate.today_reason)
+        self.assertEqual(candidate.overload_warning, TASK_COUNT_LIMIT_WARNING)
+
+        succeeded_call = mediator_run_repository.succeeded_calls[0]
+        self.assertEqual(succeeded_call["parsed_output"]["recommended_today"], [])
+        self.assertEqual(
+            succeeded_call["parsed_output"]["overload_warning"],
+            TASK_COUNT_LIMIT_WARNING,
         )
 
     def test_create_candidate_marks_failed_when_gemini_fails(self) -> None:

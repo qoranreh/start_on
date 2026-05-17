@@ -126,6 +126,36 @@ class SupabaseTaskCandidateRepository:
             reminder_rows=reminder_rows,
         )
 
+    def update_candidate(
+        self,
+        *,
+        user_id: str,
+        candidate_id: str,
+        fields: dict[str, Any] | None = None,
+        model_payload: dict[str, Any] | None = None,
+    ) -> TaskCandidateResponse:
+        payload = {
+            key: _candidate_update_value(key, value)
+            for key, value in (fields or {}).items()
+        }
+        if model_payload is not None:
+            payload["model_payload"] = _json_object(model_payload)
+        if not payload:
+            return self.get(user_id=user_id, candidate_id=candidate_id)
+
+        response = (
+            self._client.table("task_candidates")
+            .update(payload)
+            .eq("user_id", user_id)
+            .eq("id", candidate_id)
+            .execute()
+        )
+        _ensure_mutation_succeeded(
+            response,
+            "Task candidate update did not affect any rows.",
+        )
+        return self.get(user_id=user_id, candidate_id=candidate_id)
+
     def update_status(
         self,
         *,
@@ -330,6 +360,24 @@ def _candidate_status_value(status: TaskCandidateStatus | str) -> str:
     value = _enum_value(status)
     if value not in _ALLOWED_CANDIDATE_STATUSES:
         raise ValueError(f"Unsupported task candidate status: {value}")
+    return value
+
+
+def _candidate_update_value(key: str, value: Any) -> Any:
+    if key == "status":
+        return _candidate_status_value(value)
+    return _database_value(value)
+
+
+def _database_value(value: Any) -> Any:
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
+    if isinstance(value, datetime | date):
+        return value.isoformat()
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, StrEnum):
+        return value.value
     return value
 
 

@@ -1,0 +1,132 @@
+import 'package:start_on/models/api_response.dart';
+import 'package:start_on/models/task_intake_api_models.dart';
+import 'package:start_on/services/api_client.dart';
+
+class TaskIntakeRepository {
+  TaskIntakeRepository({ApiClient? apiClient})
+    : _apiClient = apiClient ?? ApiClient.authenticated(),
+      _ownsApiClient = apiClient == null;
+
+  final ApiClient _apiClient;
+  final bool _ownsApiClient;
+
+  Future<TaskIntakeResponse> createIntake(TaskIntakeRequest request) async {
+    final response = await _apiClient.postResponse<TaskIntakeResponse>(
+      '/task-intake',
+      body: request.toJson(),
+      parseData: TaskIntakeResponse.fromJson,
+    );
+
+    return _requireData(
+      response,
+      code: 'missing_task_intake',
+      message: 'Server response did not include task intake data.',
+    );
+  }
+
+  Future<TaskCandidateResponse> getCandidate(String candidateId) async {
+    final response = await _apiClient.getResponse<TaskCandidateResponse>(
+      _candidatePath(candidateId),
+      parseData: TaskCandidateResponse.fromJson,
+    );
+
+    return _requireData(
+      response,
+      code: 'missing_task_candidate',
+      message: 'Server response did not include task candidate data.',
+    );
+  }
+
+  Future<TaskCommitResultResponse> confirmCandidate(
+    String candidateId,
+    TaskConfirmRequest request,
+  ) async {
+    final response = await _apiClient.postResponse<TaskCommitResultResponse>(
+      _candidateActionPath(candidateId, 'confirm'),
+      body: request.toJson(),
+      parseData: TaskCommitResultResponse.fromJson,
+    );
+
+    return _requireData(
+      response,
+      code: 'missing_task_commit_result',
+      message: 'Server response did not include committed task data.',
+    );
+  }
+
+  Future<TaskCandidateResponse> reviseCandidate(
+    String candidateId,
+    TaskCandidateReviseRequest request,
+  ) async {
+    final response = await _apiClient.postResponse<TaskCandidateResponse>(
+      _candidateActionPath(candidateId, 'revise'),
+      body: request.toJson(),
+      parseData: TaskCandidateResponse.fromJson,
+    );
+
+    return _requireData(
+      response,
+      code: 'missing_task_candidate',
+      message: 'Server response did not include revised task candidate data.',
+    );
+  }
+
+  Future<TaskCandidateResponse> rejectCandidate(
+    String candidateId,
+    TaskCandidateRejectRequest request,
+  ) async {
+    final response = await _apiClient.postResponse<TaskCandidateResponse>(
+      _candidateActionPath(candidateId, 'reject'),
+      body: request.toJson(),
+      parseData: TaskCandidateResponse.fromJson,
+    );
+
+    return _requireData(
+      response,
+      code: 'missing_task_candidate',
+      message: 'Server response did not include rejected task candidate data.',
+    );
+  }
+
+  void close() {
+    if (_ownsApiClient) {
+      _apiClient.close();
+    }
+  }
+
+  String _candidatePath(String candidateId) =>
+      '/task-candidates/${Uri.encodeComponent(candidateId)}';
+
+  String _candidateActionPath(String candidateId, String action) =>
+      '${_candidatePath(candidateId)}/$action';
+
+  T _requireData<T>(
+    ApiResponse<T> response, {
+    required String code,
+    required String message,
+  }) {
+    final data = response.data;
+    if (response.success && data != null) {
+      return data;
+    }
+
+    final error = response.error;
+    throw TaskIntakeRepositoryException(
+      code: error?.code ?? code,
+      message: error?.message ?? message,
+    );
+  }
+}
+
+class TaskIntakeRepositoryException implements Exception {
+  const TaskIntakeRepositoryException({
+    required this.code,
+    required this.message,
+  });
+
+  final String code;
+  final String message;
+
+  @override
+  String toString() => 'TaskIntakeRepositoryException($code): $message';
+}

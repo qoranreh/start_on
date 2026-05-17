@@ -21,7 +21,12 @@ CANDIDATE_ID = "00000000-0000-4000-8000-000000000004"
 MEDIATOR_RUN_ID = "00000000-0000-4000-8000-000000000005"
 
 
-def make_candidate_response() -> TaskCandidateResponse:
+def make_candidate_response(
+    *,
+    recommended_today: bool = True,
+    today_reason: str | None = "첫 단계만 오늘 시작 가능",
+    overload_warning: str | None = None,
+) -> TaskCandidateResponse:
     return TaskCandidateResponse(
         id=CANDIDATE_ID,
         user_id=USER_ID,
@@ -35,9 +40,9 @@ def make_candidate_response() -> TaskCandidateResponse:
         energy_required=TaskEnergyRequired.MEDIUM,
         difficulty=TaskDifficulty.MEDIUM,
         next_action="과제 파일 열기",
-        recommended_today=True,
-        today_reason="첫 단계만 오늘 시작 가능",
-        overload_warning=None,
+        recommended_today=recommended_today,
+        today_reason=today_reason,
+        overload_warning=overload_warning,
         confidence=0.82,
         status=TaskCandidateStatus.DRAFT,
         model_payload={"source": "test"},
@@ -46,25 +51,34 @@ def make_candidate_response() -> TaskCandidateResponse:
     )
 
 
-def make_intake_response() -> TaskIntakeResponse:
+def make_intake_response(
+    *,
+    candidate: TaskCandidateResponse | None = None,
+) -> TaskIntakeResponse:
     return TaskIntakeResponse(
         raw_input_id=RAW_INPUT_ID,
         candidate_id=CANDIDATE_ID,
         status=RawTaskInputStatus.CANDIDATE_READY,
-        candidate=make_candidate_response(),
+        candidate=candidate or make_candidate_response(),
     )
 
 
 class FakeIntakeService:
-    def __init__(self, *, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        error: Exception | None = None,
+        response: TaskIntakeResponse | None = None,
+    ) -> None:
         self.error = error
+        self.response = response
         self.handle_calls: list[dict[str, object]] = []
 
     def handle_intake(self, *, user_id: str, request: object) -> TaskIntakeResponse:
         self.handle_calls.append({"user_id": user_id, "request": request})
         if self.error is not None:
             raise self.error
-        return make_intake_response()
+        return self.response or make_intake_response()
 
 
 class TaskIntakeRouteTest(unittest.TestCase):
@@ -114,6 +128,40 @@ class TaskIntakeRouteTest(unittest.TestCase):
         self.assertEqual(call["user_id"], USER_ID)
         self.assertEqual(call["request"].text, "컴비전 과제 해야 함")
         self.assertEqual(call["request"].source, TaskSource.MANUAL)
+
+    def test_create_task_intake_preserves_capacity_guard_candidate_fields(
+        self,
+    ) -> None:
+        overload_warning = (
+            "오늘 추천할 항목이 이미 충분해서 이 일은 Inbox에 두는 것을 추천합니다."
+        )
+        service = FakeIntakeService(
+            response=make_intake_response(
+                candidate=make_candidate_response(
+                    recommended_today=False,
+                    today_reason=None,
+                    overload_warning=overload_warning,
+                )
+            )
+        )
+        client = self.make_client(service)
+
+        response = client.post(
+            "/api/v1/task-intake",
+            json={
+                "text": "컴비전 과제 해야 함",
+                "source": TaskSource.MANUAL.value,
+                "client_timezone": "Asia/Seoul",
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["success"], True)
+        candidate = payload["data"]["candidate"]
+        self.assertEqual(candidate["recommended_today"], False)
+        self.assertIsNone(candidate["today_reason"])
+        self.assertEqual(candidate["overload_warning"], overload_warning)
 
     def test_create_task_intake_maps_value_error_to_400(self) -> None:
         service = FakeIntakeService(error=ValueError("text is invalid"))

@@ -34,6 +34,13 @@ class TaskCandidateStatus(StrEnum):
     COMMITTED = "committed"
 
 
+class TaskCandidateRevisionType(StrEnum):
+    MANUAL_EDIT = "manual_edit"
+    MAKE_SMALLER = "make_smaller"
+    ADJUST_REMINDERS = "adjust_reminders"
+    CLARIFY = "clarify"
+
+
 class CandidateSubtaskResponse(BaseModel):
     id: UUID = Field(..., description="Candidate subtask id.")
     candidate_id: UUID = Field(..., description="Parent candidate id.")
@@ -54,6 +61,28 @@ class CandidateSubtaskResponse(BaseModel):
     )
     created_at: datetime | None = Field(default=None, description="Creation timestamp.")
     updated_at: datetime | None = Field(default=None, description="Last update timestamp.")
+
+
+class TaskCandidateReviseRequest(BaseModel):
+    revision_type: TaskCandidateRevisionType = Field(
+        default=TaskCandidateRevisionType.MANUAL_EDIT,
+        description="How the user wants to revise the candidate.",
+    )
+    edited_fields: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Allowed top-level candidate fields to update.",
+    )
+    note: str | None = Field(
+        default=None,
+        description="Optional user note describing the revision intent.",
+    )
+
+
+class TaskCandidateRejectRequest(BaseModel):
+    reason: str | None = Field(
+        default=None,
+        description="Optional reason the user rejected the candidate.",
+    )
 
 
 class CandidateReminderResponse(BaseModel):

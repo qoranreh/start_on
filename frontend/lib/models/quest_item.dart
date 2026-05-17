@@ -2,6 +2,9 @@ import 'package:start_on/models/quest_category.dart';
 import 'package:start_on/models/quest_api_models.dart';
 
 const _questItemNoChange = Object();
+const questSyncTargetLocal = 'local';
+const questSyncTargetQuest = 'quest';
+const questSyncTargetTask = 'task';
 
 class QuestItem {
   QuestItem({
@@ -13,7 +16,12 @@ class QuestItem {
     required this.elapsedSeconds,
     required this.defaultDurationSeconds,
     this.dueDate,
-  });
+    List<QuestSubtask>? subtasks,
+    this.activeSubtaskId,
+    this.aiSubtaskPrompt,
+    String? syncTarget,
+  }) : subtasks = List.unmodifiable(subtasks ?? const <QuestSubtask>[]),
+       syncTarget = normalizeQuestSyncTarget(syncTarget);
 
   final String id;
   final String title;
@@ -23,6 +31,49 @@ class QuestItem {
   final int elapsedSeconds;
   final int defaultDurationSeconds;
   final DateTime? dueDate;
+  final List<QuestSubtask> subtasks;
+  final String? activeSubtaskId;
+  final String? aiSubtaskPrompt;
+  final String syncTarget;
+
+  bool get syncsWithQuestApi => syncTarget == questSyncTargetQuest;
+  bool get isTaskBacked => syncTarget == questSyncTargetTask;
+  int get plannedSubtaskDurationSeconds {
+    var total = 0;
+    for (final subtask in subtasks) {
+      total += subtask.plannedDurationSeconds;
+    }
+    return total;
+  }
+
+  int get effectiveDurationSeconds {
+    if (subtasks.isNotEmpty && plannedSubtaskDurationSeconds > 0) {
+      return plannedSubtaskDurationSeconds;
+    }
+    return defaultDurationSeconds;
+  }
+
+  String? get effectiveActiveSubtaskId {
+    if (subtasks.isEmpty) {
+      return null;
+    }
+
+    final activeSubtaskId = this.activeSubtaskId;
+    if (activeSubtaskId != null) {
+      for (final subtask in subtasks) {
+        if (subtask.id == activeSubtaskId && !subtask.isDone) {
+          return subtask.id;
+        }
+      }
+    }
+
+    for (final subtask in subtasks) {
+      if (!subtask.isDone) {
+        return subtask.id;
+      }
+    }
+    return null;
+  }
 
   QuestItem copyWith({
     String? id,
@@ -33,6 +84,10 @@ class QuestItem {
     int? elapsedSeconds,
     int? defaultDurationSeconds,
     Object? dueDate = _questItemNoChange,
+    List<QuestSubtask>? subtasks,
+    Object? activeSubtaskId = _questItemNoChange,
+    Object? aiSubtaskPrompt = _questItemNoChange,
+    String? syncTarget,
   }) {
     return QuestItem(
       id: id ?? this.id,
@@ -46,6 +101,14 @@ class QuestItem {
       dueDate: identical(dueDate, _questItemNoChange)
           ? this.dueDate
           : dueDate as DateTime?,
+      subtasks: subtasks ?? this.subtasks,
+      activeSubtaskId: identical(activeSubtaskId, _questItemNoChange)
+          ? this.activeSubtaskId
+          : activeSubtaskId as String?,
+      aiSubtaskPrompt: identical(aiSubtaskPrompt, _questItemNoChange)
+          ? this.aiSubtaskPrompt
+          : aiSubtaskPrompt as String?,
+      syncTarget: syncTarget ?? this.syncTarget,
     );
   }
 
@@ -59,6 +122,10 @@ class QuestItem {
       'elapsedSeconds': elapsedSeconds,
       'defaultDurationSeconds': defaultDurationSeconds,
       'dueDate': dueDate?.toIso8601String(),
+      'subtasks': subtasks.map((subtask) => subtask.toJson()).toList(),
+      'activeSubtaskId': activeSubtaskId,
+      'aiSubtaskPrompt': aiSubtaskPrompt,
+      'syncTarget': syncTarget,
     };
   }
 
@@ -80,6 +147,10 @@ class QuestItem {
       dueDate: rawDueDate == null
           ? null
           : normalizeQuestDueDate(DateTime.tryParse(rawDueDate)),
+      subtasks: _questSubtasksFromJson(json['subtasks']),
+      activeSubtaskId: json['activeSubtaskId'] as String?,
+      aiSubtaskPrompt: json['aiSubtaskPrompt'] as String?,
+      syncTarget: normalizeQuestSyncTarget(json['syncTarget'] as String?),
     );
   }
 
@@ -92,6 +163,7 @@ class QuestItem {
       category: normalizeQuestCategory(response.category),
       elapsedSeconds: response.elapsedSeconds,
       defaultDurationSeconds: response.defaultDurationSeconds,
+      syncTarget: questSyncTargetQuest,
     );
   }
 
@@ -115,6 +187,135 @@ class QuestItem {
       defaultDurationSeconds: defaultDurationSeconds,
     );
   }
+}
+
+class QuestSubtask {
+  const QuestSubtask({
+    required this.id,
+    required this.title,
+    required this.orderIndex,
+    this.estimatedMinutes,
+    this.status = 'todo',
+    this.isNextAction = false,
+    this.energyRequired,
+    this.completedAt,
+    this.elapsedSeconds = 0,
+  });
+
+  final String id;
+  final String title;
+  final int orderIndex;
+  final int? estimatedMinutes;
+  final String status;
+  final bool isNextAction;
+  final String? energyRequired;
+  final DateTime? completedAt;
+  final int elapsedSeconds;
+
+  bool get isDone => status == 'done';
+  int get plannedDurationSeconds {
+    final minutes = estimatedMinutes;
+    if (minutes == null || minutes <= 0) {
+      return 60;
+    }
+    return minutes * 60;
+  }
+
+  int get clampedElapsedSeconds {
+    if (elapsedSeconds < 0) {
+      return 0;
+    }
+    if (elapsedSeconds > plannedDurationSeconds) {
+      return plannedDurationSeconds;
+    }
+    return elapsedSeconds;
+  }
+
+  QuestSubtask copyWith({
+    String? id,
+    String? title,
+    int? orderIndex,
+    int? estimatedMinutes,
+    String? status,
+    bool? isNextAction,
+    String? energyRequired,
+    Object? completedAt = _questItemNoChange,
+    int? elapsedSeconds,
+  }) {
+    return QuestSubtask(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      orderIndex: orderIndex ?? this.orderIndex,
+      estimatedMinutes: estimatedMinutes ?? this.estimatedMinutes,
+      status: status ?? this.status,
+      isNextAction: isNextAction ?? this.isNextAction,
+      energyRequired: energyRequired ?? this.energyRequired,
+      completedAt: identical(completedAt, _questItemNoChange)
+          ? this.completedAt
+          : completedAt as DateTime?,
+      elapsedSeconds: elapsedSeconds ?? this.elapsedSeconds,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'orderIndex': orderIndex,
+      'estimatedMinutes': estimatedMinutes,
+      'status': status,
+      'isNextAction': isNextAction,
+      'energyRequired': energyRequired,
+      'completedAt': completedAt?.toIso8601String(),
+      'elapsedSeconds': elapsedSeconds,
+    };
+  }
+
+  factory QuestSubtask.fromJson(Map<String, dynamic> json) {
+    final rawCompletedAt = json['completedAt'] as String?;
+    return QuestSubtask(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      orderIndex: _readJsonInt(json['orderIndex']) ?? 0,
+      estimatedMinutes: _readJsonInt(json['estimatedMinutes']),
+      status: json['status'] as String? ?? 'todo',
+      isNextAction: json['isNextAction'] as bool? ?? false,
+      energyRequired: json['energyRequired'] as String?,
+      completedAt: rawCompletedAt == null
+          ? null
+          : DateTime.tryParse(rawCompletedAt),
+      elapsedSeconds: _readJsonInt(json['elapsedSeconds']) ?? 0,
+    );
+  }
+}
+
+List<QuestSubtask> _questSubtasksFromJson(Object? value) {
+  if (value is! List) {
+    return const <QuestSubtask>[];
+  }
+
+  return value
+      .whereType<Map>()
+      .map((item) => QuestSubtask.fromJson(Map<String, dynamic>.from(item)))
+      .toList();
+}
+
+int? _readJsonInt(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  return null;
+}
+
+String normalizeQuestSyncTarget(String? value) {
+  return switch (value) {
+    questSyncTargetQuest => questSyncTargetQuest,
+    questSyncTargetTask => questSyncTargetTask,
+    _ => questSyncTargetLocal,
+  };
 }
 
 int defaultQuestDurationSecondsForDifficulty(String difficulty) {

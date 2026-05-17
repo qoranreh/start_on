@@ -15,11 +15,13 @@ class QuestTimerScreen extends StatefulWidget {
     required this.quest,
     required this.userLevel,
     required this.notificationsEnabled,
+    this.onQuestChanged,
   });
 
   final QuestItem quest;
   final int userLevel;
   final bool notificationsEnabled;
+  final ValueChanged<QuestItem>? onQuestChanged;
 
   @override
   State<QuestTimerScreen> createState() => _QuestTimerScreenState();
@@ -60,8 +62,11 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   @override
   void initState() {
     super.initState();
-    _quest = widget.quest;
-    _elapsedSeconds = _quest.elapsedSeconds;
+    _quest = _normalizeQuestProgress(widget.quest);
+    _elapsedSeconds = _clampElapsedSeconds(
+      _quest.elapsedSeconds,
+      _durationSeconds,
+    );
     if (widget.notificationsEnabled) {
       _listenToBackgroundTimer();
     }
@@ -76,7 +81,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final maxDurationSeconds = _quest.defaultDurationSeconds;
+    final maxDurationSeconds = _durationSeconds;
 
     return PopScope(
       canPop: false,
@@ -118,6 +123,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
                       userLevel: widget.userLevel,
                       earnedExp: _calculateEarnedExp(),
                       maxDurationSeconds: maxDurationSeconds,
+                      onSubtaskSelect: _selectSubtask,
                     ),
                     countdown: QuestTimerCountdown(
                       controller: _countDownController,
@@ -177,10 +183,35 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
     unawaited(_resetTimerAsync());
   }
 
+  int get _durationSeconds {
+    final durationSeconds = _quest.effectiveDurationSeconds;
+    if (durationSeconds <= 0) {
+      return 1;
+    }
+    return durationSeconds;
+  }
+
+  void _selectSubtask(String subtaskId) {
+    final canSelect = _quest.subtasks.any(
+      (subtask) => subtask.id == subtaskId && !subtask.isDone,
+    );
+    if (!canSelect) {
+      return;
+    }
+
+    final updatedQuest = _quest.copyWith(
+      elapsedSeconds: _elapsedSeconds,
+      activeSubtaskId: subtaskId,
+    );
+
+    setState(() => _quest = updatedQuest);
+    widget.onQuestChanged?.call(updatedQuest);
+  }
+
   Future<void> _toggleTimerAsync() async {
     // 진행 중이면 일시정지, 끝까지 찼으면 초기화 후 재시작, 그 외에는 시작/재개.
     if (_running) {
-      if (_elapsedSeconds < _quest.defaultDurationSeconds) {
+      if (_elapsedSeconds < _durationSeconds) {
         _countDownController.pause();
       }
       if (widget.notificationsEnabled) {
@@ -188,7 +219,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
           questId: _quest.id,
           questTitle: _quest.title,
           elapsedSeconds: _elapsedSeconds,
-          defaultDurationSeconds: _quest.defaultDurationSeconds,
+          defaultDurationSeconds: _durationSeconds,
         );
       } else {
         _stopLocalTicker();
@@ -200,13 +231,13 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
       return;
     }
 
-    if (_elapsedSeconds >= _quest.defaultDurationSeconds) {
+    if (_elapsedSeconds >= _durationSeconds) {
       if (widget.notificationsEnabled) {
         await _questTimerService.startOrResumeTimer(
           questId: _quest.id,
           questTitle: _quest.title,
           elapsedSeconds: _elapsedSeconds,
-          defaultDurationSeconds: _quest.defaultDurationSeconds,
+          defaultDurationSeconds: _durationSeconds,
         );
       } else {
         _startLocalTicker();
@@ -230,7 +261,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
         questId: _quest.id,
         questTitle: _quest.title,
         elapsedSeconds: _elapsedSeconds,
-        defaultDurationSeconds: _quest.defaultDurationSeconds,
+        defaultDurationSeconds: _durationSeconds,
       );
     } else {
       _startLocalTicker();
@@ -242,7 +273,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   }
 
   Future<void> _resetTimerAsync() async {
-    if (_running && _elapsedSeconds < _quest.defaultDurationSeconds) {
+    if (_running && _elapsedSeconds < _durationSeconds) {
       _countDownController.pause();
     }
 
@@ -256,12 +287,19 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
       return;
     }
 
+    final resetSubtasks = _resetSubtasks(_quest.subtasks);
     setState(() {
       _elapsedSeconds = 0;
+      _quest = _quest.copyWith(
+        elapsedSeconds: 0,
+        subtasks: resetSubtasks,
+        activeSubtaskId: _firstIncompleteSubtaskId(resetSubtasks),
+      );
       _hasStarted = false;
       _running = false;
       _timerViewRevision += 1;
     });
+    widget.onQuestChanged?.call(_quest);
   }
 
   Future<void> _editQuest() async {
@@ -279,8 +317,8 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
       return;
     }
 
-    final questWithProgress = updatedQuest.copyWith(
-      elapsedSeconds: _elapsedSeconds,
+    final questWithProgress = _normalizeQuestProgress(
+      updatedQuest.copyWith(elapsedSeconds: _elapsedSeconds),
     );
 
     setState(() {
@@ -293,11 +331,11 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
         questId: _quest.id,
         questTitle: _quest.title,
         elapsedSeconds: _elapsedSeconds,
-        defaultDurationSeconds: _quest.defaultDurationSeconds,
+        defaultDurationSeconds: _durationSeconds,
       );
     }
 
-    if (_running && _elapsedSeconds < _quest.defaultDurationSeconds) {
+    if (_running && _elapsedSeconds < _durationSeconds) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) {
           return;
@@ -323,6 +361,12 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
 
   Future<void> _completeQuest() async {
     // 완료 시 현재 경과 시간과 인증 사진 경로를 기록 화면으로 전달한다.
+    if (!mounted || _isCompleting) {
+      return;
+    }
+
+    setState(() => _isCompleting = true);
+
     if (_running) {
       _stopLocalTicker();
       if (widget.notificationsEnabled) {
@@ -335,8 +379,6 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
     } else if (widget.notificationsEnabled) {
       await _questTimerService.stopTimer();
     }
-
-    setState(() => _isCompleting = true);
 
     final completedAt = DateTime.now();
     String? proofImagePath;
@@ -363,6 +405,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
         earnedExp: earnedExp,
         completedAt: completedAt.toIso8601String(),
         elapsedSeconds: _elapsedSeconds,
+        subtasks: _quest.subtasks,
         proofImagePath: proofImagePath,
       ),
     );
@@ -383,7 +426,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
     var didPauseTimer = false;
 
     if (_running) {
-      if (_elapsedSeconds < _quest.defaultDurationSeconds) {
+      if (_elapsedSeconds < _durationSeconds) {
         _countDownController.pause();
       }
       if (widget.notificationsEnabled) {
@@ -391,7 +434,7 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
           questId: _quest.id,
           questTitle: _quest.title,
           elapsedSeconds: _elapsedSeconds,
-          defaultDurationSeconds: _quest.defaultDurationSeconds,
+          defaultDurationSeconds: _durationSeconds,
         );
       } else {
         _stopLocalTicker();
@@ -418,14 +461,274 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
   void _startLocalTicker() {
     _localTicker?.cancel();
     _localTicker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) {
+      if (!mounted || !_running || _isCompleting) {
         return;
       }
 
-      setState(() {
-        _elapsedSeconds += 1;
-      });
+      final shouldComplete = _advanceQuestProgress(1);
+      if (shouldComplete) {
+        unawaited(_completeQuest());
+      }
     });
+  }
+
+  bool _advanceQuestProgress(
+    int elapsedDeltaSeconds, {
+    bool? running,
+    bool? hasStarted,
+  }) {
+    if (elapsedDeltaSeconds <= 0) {
+      return false;
+    }
+
+    final durationSeconds = _durationSeconds;
+    if (_quest.subtasks.isEmpty) {
+      final nextElapsedSeconds = _clampElapsedSeconds(
+        _elapsedSeconds + elapsedDeltaSeconds,
+        durationSeconds,
+      );
+      final updatedQuest = _quest.copyWith(elapsedSeconds: nextElapsedSeconds);
+      setState(() {
+        _elapsedSeconds = nextElapsedSeconds;
+        _quest = updatedQuest;
+        if (running != null) {
+          _running = running;
+        }
+        if (hasStarted != null) {
+          _hasStarted = hasStarted;
+        }
+      });
+      widget.onQuestChanged?.call(updatedQuest);
+      return nextElapsedSeconds >= durationSeconds;
+    }
+
+    final result = _advanceSubtasks(
+      _quest.subtasks,
+      activeSubtaskId: _quest.effectiveActiveSubtaskId,
+      elapsedDeltaSeconds: elapsedDeltaSeconds,
+      completedAt: DateTime.now(),
+    );
+    final nextElapsedSeconds = _clampElapsedSeconds(
+      _elapsedSeconds + result.appliedSeconds,
+      durationSeconds,
+    );
+    final updatedQuest = _quest.copyWith(
+      elapsedSeconds: nextElapsedSeconds,
+      subtasks: result.subtasks,
+      activeSubtaskId: result.activeSubtaskId,
+    );
+
+    setState(() {
+      _elapsedSeconds = nextElapsedSeconds;
+      _quest = updatedQuest;
+      if (running != null) {
+        _running = running;
+      }
+      if (hasStarted != null) {
+        _hasStarted = hasStarted;
+      }
+    });
+    widget.onQuestChanged?.call(updatedQuest);
+
+    return result.subtasks.isNotEmpty && result.activeSubtaskId == null;
+  }
+
+  QuestItem _normalizeQuestProgress(QuestItem quest) {
+    if (quest.subtasks.isEmpty) {
+      return quest.copyWith(
+        elapsedSeconds: _clampElapsedSeconds(
+          quest.elapsedSeconds,
+          quest.effectiveDurationSeconds,
+        ),
+        activeSubtaskId: null,
+      );
+    }
+
+    final normalizedSubtasks = _normalizeSubtasks(quest.subtasks);
+    final trackedSubtaskSeconds = _sumSubtaskElapsedSeconds(normalizedSubtasks);
+    final elapsedGap = quest.elapsedSeconds - trackedSubtaskSeconds;
+    final activeSubtaskId = _validActiveSubtaskId(
+      normalizedSubtasks,
+      quest.activeSubtaskId,
+    );
+
+    if (elapsedGap <= 0) {
+      return quest.copyWith(
+        elapsedSeconds: _clampElapsedSeconds(
+          quest.elapsedSeconds,
+          quest.effectiveDurationSeconds,
+        ),
+        subtasks: normalizedSubtasks,
+        activeSubtaskId: activeSubtaskId,
+      );
+    }
+
+    final advanced = _advanceSubtasks(
+      normalizedSubtasks,
+      activeSubtaskId: activeSubtaskId,
+      elapsedDeltaSeconds: elapsedGap,
+      completedAt: DateTime.now(),
+    );
+
+    return quest.copyWith(
+      elapsedSeconds: _clampElapsedSeconds(
+        quest.elapsedSeconds,
+        quest.effectiveDurationSeconds,
+      ),
+      subtasks: advanced.subtasks,
+      activeSubtaskId: advanced.activeSubtaskId,
+    );
+  }
+
+  List<QuestSubtask> _normalizeSubtasks(List<QuestSubtask> subtasks) {
+    return subtasks.map((subtask) {
+      final plannedDurationSeconds = subtask.plannedDurationSeconds;
+      final elapsedSeconds = _clampElapsedSeconds(
+        subtask.elapsedSeconds,
+        plannedDurationSeconds,
+      );
+      if (subtask.isDone) {
+        return subtask.copyWith(elapsedSeconds: plannedDurationSeconds);
+      }
+      if (elapsedSeconds >= plannedDurationSeconds) {
+        return subtask.copyWith(
+          status: 'done',
+          completedAt: subtask.completedAt ?? DateTime.now(),
+          elapsedSeconds: plannedDurationSeconds,
+        );
+      }
+      return subtask.copyWith(elapsedSeconds: elapsedSeconds);
+    }).toList();
+  }
+
+  List<QuestSubtask> _resetSubtasks(List<QuestSubtask> subtasks) {
+    return subtasks
+        .map(
+          (subtask) => subtask.copyWith(
+            status: 'todo',
+            completedAt: null,
+            elapsedSeconds: 0,
+          ),
+        )
+        .toList();
+  }
+
+  _SubtaskAdvanceResult _advanceSubtasks(
+    List<QuestSubtask> sourceSubtasks, {
+    required String? activeSubtaskId,
+    required int elapsedDeltaSeconds,
+    required DateTime completedAt,
+  }) {
+    final subtasks = _normalizeSubtasks(sourceSubtasks);
+    var remainingSeconds = elapsedDeltaSeconds;
+    var appliedSeconds = 0;
+    var currentActiveSubtaskId = _validActiveSubtaskId(
+      subtasks,
+      activeSubtaskId,
+    );
+
+    while (remainingSeconds > 0 && currentActiveSubtaskId != null) {
+      final activeIndex = _subtaskIndexById(subtasks, currentActiveSubtaskId);
+      if (activeIndex < 0) {
+        currentActiveSubtaskId = _firstIncompleteSubtaskId(subtasks);
+        continue;
+      }
+
+      final activeSubtask = subtasks[activeIndex];
+      final plannedDurationSeconds = activeSubtask.plannedDurationSeconds;
+      final currentElapsedSeconds = _clampElapsedSeconds(
+        activeSubtask.elapsedSeconds,
+        plannedDurationSeconds,
+      );
+      final remainingForSubtask =
+          plannedDurationSeconds - currentElapsedSeconds;
+
+      if (remainingForSubtask <= 0) {
+        subtasks[activeIndex] = activeSubtask.copyWith(
+          status: 'done',
+          completedAt: activeSubtask.completedAt ?? completedAt,
+          elapsedSeconds: plannedDurationSeconds,
+        );
+        currentActiveSubtaskId = _firstIncompleteSubtaskId(subtasks);
+        continue;
+      }
+
+      final secondsForSubtask = remainingSeconds < remainingForSubtask
+          ? remainingSeconds
+          : remainingForSubtask;
+      final nextElapsedSeconds = currentElapsedSeconds + secondsForSubtask;
+      final isSubtaskDone = nextElapsedSeconds >= plannedDurationSeconds;
+
+      appliedSeconds += secondsForSubtask;
+      remainingSeconds -= secondsForSubtask;
+      subtasks[activeIndex] = activeSubtask.copyWith(
+        status: isSubtaskDone ? 'done' : activeSubtask.status,
+        completedAt: isSubtaskDone
+            ? activeSubtask.completedAt ?? completedAt
+            : activeSubtask.completedAt,
+        elapsedSeconds: nextElapsedSeconds,
+      );
+
+      currentActiveSubtaskId = isSubtaskDone
+          ? _firstIncompleteSubtaskId(subtasks)
+          : activeSubtask.id;
+    }
+
+    return _SubtaskAdvanceResult(
+      subtasks: subtasks,
+      activeSubtaskId: currentActiveSubtaskId,
+      appliedSeconds: appliedSeconds,
+    );
+  }
+
+  String? _validActiveSubtaskId(
+    List<QuestSubtask> subtasks,
+    String? activeSubtaskId,
+  ) {
+    if (activeSubtaskId != null) {
+      for (final subtask in subtasks) {
+        if (subtask.id == activeSubtaskId && !subtask.isDone) {
+          return subtask.id;
+        }
+      }
+    }
+    return _firstIncompleteSubtaskId(subtasks);
+  }
+
+  String? _firstIncompleteSubtaskId(List<QuestSubtask> subtasks) {
+    for (final subtask in subtasks) {
+      if (!subtask.isDone) {
+        return subtask.id;
+      }
+    }
+    return null;
+  }
+
+  int _subtaskIndexById(List<QuestSubtask> subtasks, String subtaskId) {
+    for (var index = 0; index < subtasks.length; index += 1) {
+      if (subtasks[index].id == subtaskId) {
+        return index;
+      }
+    }
+    return -1;
+  }
+
+  int _sumSubtaskElapsedSeconds(List<QuestSubtask> subtasks) {
+    var total = 0;
+    for (final subtask in subtasks) {
+      total += subtask.clampedElapsedSeconds;
+    }
+    return total;
+  }
+
+  int _clampElapsedSeconds(int elapsedSeconds, int durationSeconds) {
+    if (elapsedSeconds < 0) {
+      return 0;
+    }
+    if (durationSeconds > 0 && elapsedSeconds > durationSeconds) {
+      return durationSeconds;
+    }
+    return elapsedSeconds;
   }
 
   void _stopLocalTicker() {
@@ -446,11 +749,30 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
         return;
       }
 
-      setState(() {
-        _elapsedSeconds = tick.elapsedSeconds;
-        _running = tick.isRunning;
-        _hasStarted = tick.elapsedSeconds > 0 || tick.isRunning;
-      });
+      final nextElapsedSeconds = _clampElapsedSeconds(
+        tick.elapsedSeconds,
+        _durationSeconds,
+      );
+      final elapsedDelta = nextElapsedSeconds - _elapsedSeconds;
+      var shouldComplete = false;
+      if (elapsedDelta > 0) {
+        shouldComplete = _advanceQuestProgress(
+          elapsedDelta,
+          running: tick.isRunning,
+          hasStarted: tick.elapsedSeconds > 0 || tick.isRunning,
+        );
+      } else {
+        setState(() {
+          _elapsedSeconds = nextElapsedSeconds;
+          _quest = _quest.copyWith(elapsedSeconds: nextElapsedSeconds);
+          _running = tick.isRunning;
+          _hasStarted = tick.elapsedSeconds > 0 || tick.isRunning;
+        });
+      }
+
+      if (shouldComplete) {
+        unawaited(_completeQuest());
+      }
     });
 
     unawaited(_syncBackgroundTimerState());
@@ -463,14 +785,31 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
     }
 
     final shouldStartCountdown =
-        snapshot.isRunning &&
-        snapshot.elapsedSeconds < _quest.defaultDurationSeconds;
+        snapshot.isRunning && snapshot.elapsedSeconds < _durationSeconds;
 
-    setState(() {
-      _elapsedSeconds = snapshot.elapsedSeconds;
-      _running = snapshot.isRunning;
-      _hasStarted = snapshot.elapsedSeconds > 0 || snapshot.isRunning;
-    });
+    final nextElapsedSeconds = _clampElapsedSeconds(
+      snapshot.elapsedSeconds,
+      _durationSeconds,
+    );
+    final elapsedDelta = nextElapsedSeconds - _elapsedSeconds;
+    if (elapsedDelta > 0) {
+      final shouldComplete = _advanceQuestProgress(
+        elapsedDelta,
+        running: snapshot.isRunning,
+        hasStarted: snapshot.elapsedSeconds > 0 || snapshot.isRunning,
+      );
+      if (shouldComplete) {
+        unawaited(_completeQuest());
+        return;
+      }
+    } else {
+      setState(() {
+        _elapsedSeconds = nextElapsedSeconds;
+        _quest = _quest.copyWith(elapsedSeconds: nextElapsedSeconds);
+        _running = snapshot.isRunning;
+        _hasStarted = snapshot.elapsedSeconds > 0 || snapshot.isRunning;
+      });
+    }
 
     if (shouldStartCountdown) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -481,4 +820,16 @@ class _QuestTimerScreenState extends State<QuestTimerScreen> {
       });
     }
   }
+}
+
+class _SubtaskAdvanceResult {
+  const _SubtaskAdvanceResult({
+    required this.subtasks,
+    required this.activeSubtaskId,
+    required this.appliedSeconds,
+  });
+
+  final List<QuestSubtask> subtasks;
+  final String? activeSubtaskId;
+  final int appliedSeconds;
 }
